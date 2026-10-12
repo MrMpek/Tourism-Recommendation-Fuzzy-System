@@ -1,0 +1,51 @@
+[
+  {
+    "id": "fb_1_20261006023656",
+    "timestamp": "2026-10-06T02:36:56.231730",
+    "destination_id": "gr_santorini",
+    "destination_name": "Σαντορίνη",
+    "user_query": {
+      "budget": 1500,
+      "climate": 28
+    },
+    "rating": 5,
+    "accepted": true,
+    "comment": "Εξαιρετική πρόταση για καλοκαίρι!"
+  },
+  {
+    "id": "fb_2_20261010040411",
+    "timestamp": "2026-10-10T04:04:11.282516",
+    "destination_id": "gr_chania",
+    "destination_name": "Χανιά",
+    "user_query": {
+      "budget": 1200.0,
+      "climate": 24.0,
+      "duration": 5.0,
+      "culture": 8.0,
+      "adventure": 4.0,
+      "relaxation": 7.0,
+      "nightlife": 6.0
+    },
+    "rating": 5,
+    "accepted": true,
+    "comment": "Αυτοματοποιημένος έλεγχος δοκιμής"
+  },
+  {
+    "id": "fb_3_20261010045820",
+    "timestamp": "2026-10-10T04:58:20.619159",
+    "destination_id": "gr_chania",
+    "destination_name": "Χανιά",
+    "user_query": {
+      "budget": 1200.0,
+      "climate": 24.0,
+      "duration": 5.0,
+      "culture": 8.0,
+      "adventure": 4.0,
+      "relaxation": 7.0,
+      "nightlife": 6.0
+    },
+    "rating": 5,
+    "accepted": true,
+    "comment": "Αυτοματοποιημένος έλεγχος δοκιμής"
+  }
+]
