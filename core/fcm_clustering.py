@@ -2,21 +2,32 @@
 Fuzzy C-Means (FCM) Clustering Module.
 Implements Bezdek's algorithm for soft clustering of tourists into behavioral personas.
 Includes mathematical objective calculation, cluster validation metrics (PC, PE),
+optimal persona matching via Hungarian algorithm (linear_sum_assignment),
 and inference for new incoming user queries.
 """
 from typing import Dict, List, Tuple, Optional, Any
 import numpy as np
 import pandas as pd
+from scipy.optimize import linear_sum_assignment
 
 
 class TouristPersona:
     """Represents a discovered tourist persona archetype."""
-    def __init__(self, cluster_id: int, name: str, greek_name: str, description: str, key_traits: List[str]):
-        self.cluster_id = cluster_id
+    def __init__(
+        self,
+        persona_id: int,
+        name: str,
+        greek_name: str,
+        description: str,
+        key_traits: List[str],
+        prototype_raw: Dict[str, float]
+    ):
+        self.persona_id = persona_id
         self.name = name
         self.greek_name = greek_name
         self.description = description
         self.key_traits = key_traits
+        self.prototype_raw = prototype_raw
 
 
 class FuzzyCMeansModel:
@@ -41,35 +52,40 @@ class FuzzyCMeansModel:
             "Cultural & Heritage Explorer",
             "Εξερευνητής Πολιτισμού & Ιστορίας",
             "Ταξιδιώτης με έντονο ενδιαφέρον για μουσεία, αρχαιολογικούς χώρους, αρχιτεκτονική και τοπική γαστρονομία σε εύκρατο κλίμα.",
-            ["Υψηλή πολιτιστική συνάφεια", "Ήπιο κλίμα", "Ευρωπαϊκές πρωτεύουσες & ιστορικές πόλεις"]
+            ["Υψηλή πολιτιστική συνάφεια", "Ήπιο κλίμα", "Ευρωπαϊκές πρωτεύουσες & ιστορικές πόλεις"],
+            {"budget": 1800.0, "climate": 19.0, "duration": 6.0, "culture": 8.65, "adventure": 3.5, "relaxation": 5.5, "nightlife": 4.5}
         ),
         TouristPersona(
             1,
             "Luxury & Wellness Relaxer",
             "Ταξιδιώτης Πολυτέλειας & Ευεξίας",
             "Αποζητά άνεση, premium ξενοδοχεία 5 αστέρων, spa, γαστρονομία υψηλής ραπτικής και απόλυτη χαλάρωση σε ζεστούς προορισμούς.",
-            ["Υψηλός προϋπολογισμός", "Χαλάρωση & Resort", "Θερμό/νησιωτικό κλίμα"]
+            ["Υψηλός προϋπολογισμός", "Χαλάρωση & Resort", "Θερμό/νησιωτικό κλίμα"],
+            {"budget": 3800.0, "climate": 30.0, "duration": 9.0, "culture": 4.5, "adventure": 2.5, "relaxation": 9.25, "nightlife": 5.75}
         ),
         TouristPersona(
             2,
             "Budget Backpacker & Youth Nomad",
             "Οικονομικός Backpacker & Νεανικός Εξερευνητής",
             "Νέος ή low-budget ταξιδιώτης που αναζητά αυθεντικές εμπειρίες, hostels, κοινωνικοποίηση και εξοικονόμηση πόρων.",
-            ["Χαμηλό κόστος", "Ευελιξία", "Αυθεντικότητα & Social vibe"]
+            ["Χαμηλό κόστος", "Ευελιξία", "Αυθεντικότητα & Social vibe"],
+            {"budget": 425.0, "climate": 24.0, "duration": 4.5, "culture": 5.5, "adventure": 8.0, "relaxation": 3.5, "nightlife": 7.75}
         ),
         TouristPersona(
             3,
             "Alpine & Nature Adventure Seeker",
             "Λάτρης Φύσης & Ορεινής Περιπέτειας",
             "Ενθουσιώδης με trekking, ορειβασία, extreme sports, φαράγγια και φυσικά τοπία σε ορεινό ή δροσερό περιβάλλον.",
-            ["Υψηλή περιπέτεια", "Επαφή με τη φύση", "Δροσερό/ψυχρό κλίμα"]
+            ["Υψηλή περιπέτεια", "Επαφή με τη φύση", "Δροσερό/ψυχρό κλίμα"],
+            {"budget": 1300.0, "climate": 9.0, "duration": 7.5, "culture": 3.5, "adventure": 9.25, "relaxation": 4.5, "nightlife": 2.5}
         ),
         TouristPersona(
             4,
             "Cosmopolitan & Nightlife Vibe",
             "Κοσμοπολίτης της Νυχτερινής Ζωής",
             "Εστιάζει σε ζωντανές μητροπόλεις, bar hopping, μουσικά festivals, clubbing, γρήγορους ρυθμούς και σύντομες αποδράσεις.",
-            ["Έντονη νυχτερινή ζωή", "City breaks", "Ψυχαγωγία & Διασκέδαση"]
+            ["Έντονη νυχτερινή ζωή", "City breaks", "Ψυχαγωγία & Διασκέδαση"],
+            {"budget": 1150.0, "climate": 23.0, "duration": 3.0, "culture": 5.5, "adventure": 3.5, "relaxation": 3.5, "nightlife": 9.25}
         )
     ]
 
@@ -84,6 +100,10 @@ class FuzzyCMeansModel:
         self.u_matrix: Optional[np.ndarray] = None   # Shape: (N, C)
         self.cost_history: List[float] = []
         self.is_fitted = False
+
+        # Cluster to persona mappings (resolved via Hungarian algorithm)
+        self.cluster_to_persona: Dict[int, int] = {}
+        self.persona_to_cluster: Dict[int, int] = {}
 
         # Min-Max normalization bounds
         self.bounds = {
@@ -107,10 +127,21 @@ class FuzzyCMeansModel:
             vec.append(norm_val)
         return np.array(vec, dtype=float)
 
+    def denormalize_vector(self, norm_vec: np.ndarray) -> Dict[str, float]:
+        """Denormalizes a [0, 1] vector back into real physical units (€, °C, days, /10)."""
+        res = {}
+        feats = ["budget", "climate", "duration", "culture", "adventure", "relaxation", "nightlife"]
+        for idx, feat in enumerate(feats):
+            low, high = self.bounds[feat]
+            real_val = float(norm_vec[idx] * (high - low) + low)
+            res[feat] = round(real_val, 2)
+        return res
+
     def fit(self, X: np.ndarray) -> "FuzzyCMeansModel":
         """
         Fits Fuzzy C-Means on dataset X of shape (N, D).
-        Uses alternating optimization between Centroids and Membership matrix.
+        Uses alternating optimization between Centroids and Membership matrix,
+        and subsequently aligns cluster centroids to predefined personas via Hungarian algorithm.
         """
         np.random.seed(self.random_state)
         n_samples, n_features = X.shape
@@ -127,7 +158,6 @@ class FuzzyCMeansModel:
             centroids = (um.T @ X) / np.sum(um.T, axis=1, keepdims=True)
 
             # Step 2: Compute Euclidean distances: d_ij = ||x_i - v_j||
-            # distances shape: (N, C)
             dists = np.zeros((n_samples, self.n_clusters))
             for j in range(self.n_clusters):
                 dists[:, j] = np.linalg.norm(X - centroids[j], axis=1)
@@ -153,13 +183,29 @@ class FuzzyCMeansModel:
 
         self.centroids = centroids
         self.u_matrix = U
+
+        # Step 5: Bipartite Matching (Hungarian algorithm) between centroids and persona prototypes
+        # Ensures cluster identity matches domain definitions regardless of random initialization
+        prototype_vectors = np.array([
+            self.normalize_vector(p.prototype_raw) for p in self.PERSONA_DEFINITIONS
+        ])  # Shape: (5, 7)
+
+        cost_matrix = np.zeros((self.n_clusters, len(self.PERSONA_DEFINITIONS)))
+        for c in range(self.n_clusters):
+            for p in range(len(self.PERSONA_DEFINITIONS)):
+                cost_matrix[c, p] = np.linalg.norm(self.centroids[c] - prototype_vectors[p])
+
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+        self.cluster_to_persona = {int(c): int(p) for c, p in zip(row_ind, col_ind)}
+        self.persona_to_cluster = {int(p): int(c) for c, p in zip(row_ind, col_ind)}
+
         self.is_fitted = True
         return self
 
     def predict_membership(self, raw_input: Dict[str, float]) -> Dict[str, Any]:
         """
         Computes soft membership degrees u_j for an incoming traveler across all personas.
-        Returns detailed persona weights and the dominant persona.
+        Returns persona weights aligned to correct cluster personas.
         """
         if not self.is_fitted or self.centroids is None:
             raise ValueError("FCM model is not fitted yet.")
@@ -170,16 +216,19 @@ class FuzzyCMeansModel:
         dists = np.linalg.norm(self.centroids - x_norm, axis=1)
         dists = np.fmax(dists, 1e-10)
 
-        # Fuzzy membership formula: u_j = 1 / sum_{k=1}^C (d_j / d_k)^(2/(m-1))
+        # Fuzzy membership formula: u_c = 1 / sum_{k=1}^C (d_c / d_k)^(2/(m-1))
         power = 2.0 / (self.m - 1.0)
         inv_dists = dists ** (-power)
         memberships = inv_dists / np.sum(inv_dists)
 
         persona_results = []
-        for idx, persona in enumerate(self.PERSONA_DEFINITIONS):
-            weight = float(memberships[idx])
+        for cluster_idx in range(self.n_clusters):
+            p_idx = self.cluster_to_persona.get(cluster_idx, cluster_idx)
+            persona = self.PERSONA_DEFINITIONS[p_idx]
+            weight = float(memberships[cluster_idx])
             persona_results.append({
-                "cluster_id": idx,
+                "cluster_id": int(cluster_idx),
+                "persona_id": int(p_idx),
                 "name": persona.name,
                 "greek_name": persona.greek_name,
                 "description": persona.description,
@@ -199,41 +248,78 @@ class FuzzyCMeansModel:
             "raw_normalized_vector": x_norm.tolist()
         }
 
-    def compute_validation_metrics(self) -> Dict[str, float]:
+    def compute_validation_metrics(self) -> Dict[str, Any]:
         """
         Calculates Fuzzy Partition Coefficient (PC) and Partition Entropy (PE)
         - PC = (1/N) * sum_{i,j} (u_ij)^2   [ranges from 1/C to 1, higher is better]
         - PE = - (1/N) * sum_{i,j} u_ij * log(u_ij)  [ranges from 0 to log(C), lower is better]
+        Also returns cluster-to-persona assignments.
         """
         if not self.is_fitted or self.u_matrix is None:
             return {}
 
         N = self.u_matrix.shape[0]
         pc = float(np.sum(self.u_matrix ** 2) / N)
-        
+
         # Partition entropy
         u_safe = np.clip(self.u_matrix, 1e-12, 1.0)
         pe = float(-np.sum(u_safe * np.log(u_safe)) / N)
+
+        assignments = {}
+        for c, p in self.cluster_to_persona.items():
+            assignments[f"Cluster_{c}"] = self.PERSONA_DEFINITIONS[p].name
 
         return {
             "partition_coefficient_PC": round(pc, 4),
             "partition_entropy_PE": round(pe, 4),
             "clusters_count": self.n_clusters,
-            "iterations_to_converge": len(self.cost_history)
+            "iterations_to_converge": len(self.cost_history),
+            "cluster_to_persona": self.cluster_to_persona,
+            "persona_assignments": assignments
         }
+
+    def get_centroids_dataframe(self) -> pd.DataFrame:
+        """
+        Returns a DataFrame of cluster centroids converted back to physical units
+        (€, °C, days, /10), labeled with each cluster's aligned persona name.
+        """
+        if not self.is_fitted or self.centroids is None:
+            return pd.DataFrame()
+
+        rows = []
+        for cluster_idx in range(self.n_clusters):
+            p_idx = self.cluster_to_persona.get(cluster_idx, cluster_idx)
+            persona = self.PERSONA_DEFINITIONS[p_idx]
+            raw_vals = self.denormalize_vector(self.centroids[cluster_idx])
+            rows.append({
+                "Cluster ID": f"Cluster {cluster_idx}",
+                "Persona": persona.greek_name,
+                "English Name": persona.name,
+                "Budget (€)": f"{int(raw_vals['budget'])} €",
+                "Κλίμα (°C)": f"{raw_vals['climate']:.1f} °C",
+                "Διάρκεια": f"{raw_vals['duration']:.1f} ημ.",
+                "Πολιτισμός": f"{raw_vals['culture']:.1f}/10",
+                "Περιπέτεια": f"{raw_vals['adventure']:.1f}/10",
+                "Χαλάρωση": f"{raw_vals['relaxation']:.1f}/10",
+                "Νυχτερινή Ζωή": f"{raw_vals['nightlife']:.1f}/10",
+            })
+        return pd.DataFrame(rows)
 
 
 def generate_synthetic_tourist_dataset(n_samples: int = 350, random_state: int = 42) -> Tuple[np.ndarray, pd.DataFrame]:
     """
-    Generates a realistic synthetic historical dataset of 350 travelers
-    representing diverse tourist personas in Greece and internationally.
+    [Συνθετικό Σύνολο Δεδομένων (Synthetic Behavioral Dataset)]
+    Generates a realistic synthetic historical dataset of 350 travelers representing
+    diverse tourist personas in Greece and internationally.
+    This synthetic dataset is explicitly designed for the academic evaluation and training
+    of the Fuzzy C-Means (FCM) clustering model, modeling representative traveler behavioral patterns.
     """
     np.random.seed(random_state)
     records = []
 
     # Archetype centers in raw units
     archetypes = [
-        # 0: Cultural Explorer: medium-high budget, mild climate, 4-7 days, high culture
+        # 0: Cultural Explorer: medium-high budget, mild climate, 4-8 days, high culture
         {"budget": (1200, 2400), "climate": (15, 23), "duration": (4, 8), "culture": (7.5, 9.8), "adventure": (2.0, 5.0), "relaxation": (4.0, 7.0), "nightlife": (3.0, 6.0)},
         # 1: Luxury & Wellness: high budget, warm climate, 6-12 days, high relaxation
         {"budget": (2800, 4800), "climate": (26, 34), "duration": (6, 12), "culture": (3.0, 6.0), "adventure": (1.0, 4.0), "relaxation": (8.5, 10.0), "nightlife": (4.0, 7.5)},
@@ -263,7 +349,7 @@ def generate_synthetic_tourist_dataset(n_samples: int = 350, random_state: int =
             records.append(entry)
 
     df = pd.DataFrame(records)
-    
+
     # Create normalized X matrix
     X_norm = []
     for _, row in df.iterrows():

@@ -1,13 +1,15 @@
 """
 Hybrid Tourism Recommender System.
-Integrates Mamdani Fuzzy Inference Engine + Fuzzy C-Means (FCM) Soft Personas + Catalog Matching.
+Integrates Mamdani Fuzzy Inference Engine + Fuzzy C-Means (FCM) Soft Personas + Multi-Criteria Catalog Matching.
 Provides transparent Explainable AI (XAI) rationale for travel agencies and clients.
 """
 from typing import Dict, List, Any, Optional
 import numpy as np
 
+from core.membership import trapezoidal, triangular
 from core.fuzzy_engine import FuzzyTourismEngine, DestinationArchetype
 from core.fcm_clustering import FuzzyCMeansModel, generate_synthetic_tourist_dataset
+from core.persona_mapping import compute_persona_affinity
 from data.catalog_manager import CatalogManager
 from data.feedback_manager import FeedbackManager
 
@@ -16,9 +18,9 @@ class HybridTourismRecommender:
     """
     Enterprise-ready Hybrid Tourism Recommender.
     Combines:
-    1. Mamdani FIS: rule-based fuzzy reasoning and defuzzification
-    2. FCM Clustering: soft behavioral clustering into tourist personas
-    3. Multi-criteria matching: budget compatibility, duration fit, and activity alignment
+    1. Mamdani FIS: rule-based fuzzy reasoning and defuzzification (36 expert rules)
+    2. FCM Clustering: soft behavioral clustering into tourist personas & persona-archetype affinity
+    3. Multi-criteria fuzzy scoring: fuzzy budget tolerance, fuzzy climate match, fuzzy duration fit, and activity alignment
     4. Adaptive Feedback Loop: incorporates user ratings to continuously refine recommendations
     """
     def __init__(self, catalog_path: Optional[str] = None):
@@ -53,7 +55,7 @@ class HybridTourismRecommender:
         active_rules = self.fuzzy_engine.evaluate_rules(fuzzified)
         archetype_affinities = self.fuzzy_engine.compute_archetype_affinities(active_rules)
 
-        # Step 3: FCM Soft Persona Profiling
+        # Step 3: FCM Soft Persona Profiling (A1 & A2)
         persona_profiling = self.fcm_model.predict_membership(user_inputs)
 
         # Step 4: Multi-Criteria Scoring for each Destination in Catalog
@@ -73,41 +75,53 @@ class HybridTourismRecommender:
             if country_filter and country_filter != "Όλες" and dest.get("country") != country_filter:
                 continue
 
-            # A. Archetype Fuzzy Match (0 to 100)
+            # A. Archetype Fuzzy Match (0 to 100) via Mamdani Centroid
             primary_arch = dest.get("archetype")
             secondary_arch = dest.get("secondary_archetype")
-            arch_score = archetype_affinities.get(primary_arch, 50.0)
+            arch_score = archetype_affinities.get(primary_arch, 10.0)
             if secondary_arch and secondary_arch in archetype_affinities:
                 arch_score = 0.75 * arch_score + 0.25 * archetype_affinities[secondary_arch]
 
-            # B. Budget Compatibility (Fuzzy tolerance)
-            # Estimated total cost for this trip = daily_cost * duration
+            # B. FCM Persona Affinity Score (A1)
+            # Evaluates traveler's soft persona mixture against destination archetypes
+            persona_aff_prim = compute_persona_affinity(persona_profiling["all_personas"], primary_arch)
+            persona_score = 100.0 * persona_aff_prim
+            if secondary_arch:
+                persona_aff_sec = compute_persona_affinity(persona_profiling["all_personas"], secondary_arch)
+                persona_score = 0.75 * persona_score + 0.25 * (100.0 * persona_aff_sec)
+
+            # C. Fuzzy Budget Compatibility (B4)
+            # Εκτιμώμενο κόστος ταξιδιού = ημερήσιο κόστος * διάρκεια.
+            # Υπολογίζεται ως ασαφής βαθμός συμμετοχής στο ασαφές σύνολο "Εντός Προϋπολογισμού"
+            # με τραπεζοειδή συνάρτηση συμμετοχής trapezoidal(x, 0, 0, B, 1.35*B).
             est_cost = dest.get("avg_daily_cost", 120.0) * duration_days
-            cost_diff = est_cost - total_budget
-            if cost_diff <= 0:
-                # Within budget: full score
-                budget_score = 100.0
-            else:
-                # Over budget: degrade smoothly
-                pct_over = cost_diff / total_budget
-                budget_score = max(0.0, 100.0 * (1.0 - 1.5 * pct_over))
+            budget_score = trapezoidal(est_cost, 0.0, 0.0, total_budget, total_budget * 1.35) * 100.0
 
-            # C. Duration Compatibility
+            # D. Fuzzy Duration Fit (B4)
+            # Ασαφής βαθμός συμμετοχής της διάρκειας του ταξιδιώτη στο βέλτιστο εύρος του προορισμού.
             min_d, max_d = dest.get("optimal_duration_days", [3, 7])
-            if min_d <= duration_days <= max_d:
-                duration_score = 100.0
-            elif duration_days < min_d:
-                duration_score = max(40.0, 100.0 - (min_d - duration_days) * 20.0)
-            else:
-                duration_score = max(50.0, 100.0 - (duration_days - max_d) * 10.0)
+            duration_score = trapezoidal(
+                duration_days,
+                max(1.0, float(min_d) - 2.0),
+                float(min_d),
+                float(max_d),
+                float(max_d) + 4.0
+            ) * 100.0
 
-            # D. Climate Compatibility (Temperature proximity)
+            # E. Fuzzy Climate Compatibility (B4)
+            # Ασαφής βαθμός συμμετοχής της τυπικής θερμοκρασίας του προορισμού στο γλωσσικό
+            # σύνολο "Ιδανικό Κλίμα" γύρω από την επιθυμητή θερμοκρασία του χρήστη.
             dest_temp = dest.get("typical_temperature_c", 22.0)
-            temp_diff = abs(dest_temp - desired_temp)
-            # Gaussian-like temperature satisfaction
-            climate_score = max(0.0, 100.0 * np.exp(- (temp_diff ** 2) / (2 * (6.0 ** 2))))
+            climate_score = trapezoidal(
+                dest_temp,
+                desired_temp - 10.0,
+                desired_temp - 2.0,
+                desired_temp + 2.0,
+                desired_temp + 10.0
+            ) * 100.0
 
-            # E. Activity Vector Alignment
+            # F. Activity Vector Alignment
+            # Σύγκριση των 4 επιθυμιών δραστηριότητας με τις βαθμολογίες του προορισμού (απόσταση Manhattan).
             dest_scores = dest.get("scores", {})
             diff_culture = abs(user_culture - dest_scores.get("culture", 5.0))
             diff_adventure = abs(user_adventure - dest_scores.get("adventure", 5.0))
@@ -116,31 +130,40 @@ class HybridTourismRecommender:
             avg_diff = (diff_culture + diff_adventure + diff_relaxation + diff_nightlife) / 4.0
             activity_score = max(0.0, 100.0 - (avg_diff * 10.0))
 
-            # F. Final Weighted Aggregation (Master Score)
+            # G. Final Weighted Aggregation (Master Score - Sum of Weights = 1.00)
+            # 0.25 * Mamdani FIS Archetype Match
+            # 0.15 * FCM Persona Fit
+            # 0.20 * Fuzzy Budget Match
+            # 0.20 * Activity Alignment
+            # 0.10 * Fuzzy Climate Match
+            # 0.10 * Fuzzy Duration Fit
             base_score = (
-                0.35 * arch_score +
+                0.25 * arch_score +
+                0.15 * persona_score +
                 0.20 * budget_score +
                 0.20 * activity_score +
-                0.15 * climate_score +
+                0.10 * climate_score +
                 0.10 * duration_score
             )
 
-            # G. Adaptive Feedback Loop Adjustment
+            # H. Adaptive Feedback Loop Adjustment
             fb_stats = self.feedback_mgr.get_destination_feedback_stats(dest.get("id", ""))
             fb_delta = fb_stats.get("feedback_delta", 0.0)
             final_score = round(min(100.0, max(0.0, base_score + fb_delta)), 1)
 
             # Explainable AI (XAI) rationale synthesis
             rationale_reasons = []
-            if arch_score >= 70:
+            if arch_score >= 65.0:
                 rationale_reasons.append(f"Εξαιρετική αντιστοίχιση με τον τύπο προορισμού '{primary_arch}' (Fuzzy: {round(arch_score, 1)}%)")
-            if budget_score >= 85:
+            if persona_score >= 60.0:
+                rationale_reasons.append(f"Ταιριάζει με το προφίλ σας: {persona_profiling['dominant_persona']} ({round(persona_score, 1)}%)")
+            if budget_score >= 85.0:
                 rationale_reasons.append(f"Πλήρης κάλυψη προϋπολογισμού (Εκτιμώμενο κόστος: ~{int(est_cost)}€ έναντι {int(total_budget)}€)")
-            elif budget_score < 50:
+            elif budget_score < 40.0:
                 rationale_reasons.append(f"Προσοχή στο budget: Υπέρβαση (~{int(est_cost)}€ έναντι {int(total_budget)}€)")
-            if climate_score >= 75:
+            if climate_score >= 75.0:
                 rationale_reasons.append(f"Ιδανική θερμοκρασία ({dest_temp}°C έναντι επιθυμητής {int(desired_temp)}°C)")
-            if activity_score >= 75:
+            if activity_score >= 70.0:
                 rationale_reasons.append("Υψηλή αρμονία με τις επιθυμητές δραστηριότητες")
             if fb_delta > 0:
                 rationale_reasons.append(f"📈 Ενισχυμένο από θετική ανάδραση χρηστών (+{fb_delta}% από {fb_stats['count']} κριτικές)")
@@ -154,6 +177,7 @@ class HybridTourismRecommender:
                 "feedback_stats": fb_stats,
                 "component_scores": {
                     "archetype_fuzzy": round(arch_score, 1),
+                    "persona_fit": round(persona_score, 1),
                     "budget_compatibility": round(budget_score, 1),
                     "activity_alignment": round(activity_score, 1),
                     "climate_match": round(climate_score, 1),

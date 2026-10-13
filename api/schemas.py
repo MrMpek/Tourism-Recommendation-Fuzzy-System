@@ -20,10 +20,12 @@ class UserPreferencesRequest(BaseModel):
 
 class DestinationScoreBreakdown(BaseModel):
     archetype_fuzzy: float
+    persona_fit: float = 0.0
     budget_compatibility: float
     activity_alignment: float
     climate_match: float
     duration_fit: float
+    feedback_adjustment: Optional[float] = 0.0
 
 
 class RecommendedDestination(BaseModel):

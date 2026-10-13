@@ -97,14 +97,16 @@ def plot_persona_radar_chart(persona_results: List[Dict[str, Any]]) -> go.Figure
 def plot_destination_scores_breakdown(component_scores: Dict[str, float], dest_name: str) -> go.Figure:
     """Generates a horizontal bar chart displaying component criteria scores for a destination."""
     labels = [
-        "Fuzzy Archetype",
-        "Budget Match",
+        "Fuzzy Archetype (Mamdani)",
+        "FCM Persona Fit",
+        "Budget Match (Fuzzy)",
         "Activity Fit",
-        "Climate Match",
+        "Climate Match (Fuzzy)",
         "Duration Fit"
     ]
     keys = [
         "archetype_fuzzy",
+        "persona_fit",
         "budget_compatibility",
         "activity_alignment",
         "climate_match",
@@ -129,7 +131,7 @@ def plot_destination_scores_breakdown(component_scores: Dict[str, float], dest_n
         xaxis=dict(range=[0, 105], title="Βαθμός Συμβατότητας (%)"),
         yaxis=dict(autorange="reversed"),
         template="plotly_white",
-        height=260,
+        height=280,
         margin=dict(l=20, r=20, t=40, b=20)
     )
     return fig

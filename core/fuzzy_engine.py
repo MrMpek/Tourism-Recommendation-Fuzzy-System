@@ -1,6 +1,7 @@
 """
 Mamdani Fuzzy Inference System for Tourism Recommendations.
 Implements fuzzification, fuzzy rule evaluation (min/max), aggregation, and centroid defuzzification.
+Comprehensive expert rule base of 36 rules covering all archetypes with full linguistic coverage.
 """
 from typing import Dict, List, Any, Tuple
 import numpy as np
@@ -76,12 +77,17 @@ class FuzzyTourismEngine:
         return var
 
     def _build_expert_rule_base(self):
-        """Builds a comprehensive expert rule base linking tourist desires with archetypes & suitability."""
+        """
+        Builds a comprehensive expert rule base of 36 rules linking tourist preferences
+        with all 6 archetypes. Covers High, Medium, and Low levels with Poor, Moderate, High, and Excellent consequents.
+        """
         rule_defs = [
-            # Cultural Rules
+            # -------------------------------------------------------------
+            # Category 1: Cultural & Heritage City (6 rules)
+            # -------------------------------------------------------------
             ("R01", {"culture": "High", "duration": "Short", "climate": "Mild"},
              {"archetype": DestinationArchetype.CULTURAL_HERITAGE, "suitability": "Excellent"},
-             "Ιδανικό για σύντομο πολιτιστικό city break σε ήπιο καιρό"),
+             "Σύντομο πολιτιστικό city break σε ήπιο καιρό"),
 
             ("R02", {"culture": "High", "budget": "Medium"},
              {"archetype": DestinationArchetype.CULTURAL_HERITAGE, "suitability": "High"},
@@ -91,70 +97,152 @@ class FuzzyTourismEngine:
              {"archetype": DestinationArchetype.CULTURAL_HERITAGE, "suitability": "Excellent"},
              "Πλούσιο πολιτιστικό ταξίδι με υψηλό προϋπολογισμό"),
 
-            # Island & Relaxation Rules
-            ("R04", {"relaxation": "High", "climate": "Warm", "duration": "Medium"},
+            ("R04", {"culture": "Medium", "climate": "Mild"},
+             {"archetype": DestinationArchetype.CULTURAL_HERITAGE, "suitability": "Moderate"},
+             "Μέτριο πολιτιστικό ενδιαφέρον σε ευχάριστο ήπιο κλίμα"),
+
+            ("R05", {"culture": "Medium", "duration": "Short"},
+             {"archetype": DestinationArchetype.CULTURAL_HERITAGE, "suitability": "Moderate"},
+             "Σύντομη απόδραση με ισορροπημένο ενδιαφέρον για μουσεία"),
+
+            ("R06", {"culture": "Low"},
+             {"archetype": DestinationArchetype.CULTURAL_HERITAGE, "suitability": "Poor"},
+             "Χαμηλό ενδιαφέρον για ιστορία και μουσεία"),
+
+            # -------------------------------------------------------------
+            # Category 2: Coastal & Island Relaxation (6 rules)
+            # -------------------------------------------------------------
+            ("R07", {"relaxation": "High", "climate": "Warm", "duration": "Medium"},
              {"archetype": DestinationArchetype.ISLAND_RELAXATION, "suitability": "Excellent"},
-             "Ιδανικές παραθαλάσσιες/νησιωτικές διακοπές χαλάρωσης σε ζεστό κλίμα"),
+             "Ιδανικές παραθαλάσσιες διακοπές χαλάρωσης σε ζεστό κλίμα"),
 
-            ("R05", {"relaxation": "High", "climate": "Warm", "duration": "Long"},
+            ("R08", {"relaxation": "High", "climate": "Warm", "duration": "Long"},
              {"archetype": DestinationArchetype.ISLAND_RELAXATION, "suitability": "Excellent"},
-             "Πολυήμερες θερινές διακοπές απόλυτης ανάπαυλας"),
+             "Πολυήμερες θερινές διακοπές ανάπαυλας σε νησί"),
 
-            ("R06", {"relaxation": "High", "budget": "High", "climate": "Warm"},
-             {"archetype": DestinationArchetype.LUXURY_ESCORT, "suitability": "Excellent"},
-             "Πολυτελής καλοκαιρινή χαλάρωση σε premium resort"),
+            ("R09", {"relaxation": "High", "climate": "Warm"},
+             {"archetype": DestinationArchetype.ISLAND_RELAXATION, "suitability": "High"},
+             "Έντονη επιθυμία χαλάρωσης σε θερμό περιβάλλον"),
 
-            # Mountain & Adventure Rules
-            ("R07", {"adventure": "High", "climate": "Cold"},
+            ("R10", {"relaxation": "Medium", "climate": "Warm"},
+             {"archetype": DestinationArchetype.ISLAND_RELAXATION, "suitability": "Moderate"},
+             "Μέτρια χαλάρωση σε θερμό καλοκαιρινό προορισμό"),
+
+            ("R11", {"relaxation": "High", "climate": "Cold"},
+             {"archetype": DestinationArchetype.ISLAND_RELAXATION, "suitability": "Poor"},
+             "Παραθαλάσσια χαλάρωση ασύμβατη με ψυχρό κλίμα"),
+
+            ("R12", {"relaxation": "Low"},
+             {"archetype": DestinationArchetype.ISLAND_RELAXATION, "suitability": "Poor"},
+             "Χαμηλή προτεραιότητα σε παραλίες και ανάπαυλα"),
+
+            # -------------------------------------------------------------
+            # Category 3: Alpine & Mountain Adventure (6 rules)
+            # -------------------------------------------------------------
+            ("R13", {"adventure": "High", "climate": "Cold"},
              {"archetype": DestinationArchetype.MOUNTAIN_ADVENTURE, "suitability": "Excellent"},
              "Ορεινή περιπέτεια και χειμερινά σπορ σε ψυχρό κλίμα"),
 
-            ("R08", {"adventure": "High", "budget": "Low"},
+            ("R14", {"adventure": "High", "budget": "Low"},
              {"archetype": DestinationArchetype.MOUNTAIN_ADVENTURE, "suitability": "High"},
-             "Backpacking & εξορμήσεις στη φύση με χαμηλό κόστος"),
+             "Backpacking και υπαίθρια περιπέτεια με χαμηλό κόστος"),
 
-            ("R09", {"adventure": "High", "duration": "Medium", "climate": "Mild"},
+            ("R15", {"adventure": "High", "duration": "Medium", "climate": "Mild"},
              {"archetype": DestinationArchetype.MOUNTAIN_ADVENTURE, "suitability": "High"},
-             "Πεζοπορία, trekking και δραστηριότητες υπαίθρου σε εύκρατο κλίμα"),
+             "Πεζοπορία και δραστηριότητες βουνού σε εύκρατο κλίμα"),
 
-            # Nightlife & Urban Rules
-            ("R10", {"nightlife": "High", "duration": "Short", "budget": "Low"},
-             {"archetype": DestinationArchetype.VIBRANT_NIGHTLIFE, "suitability": "High"},
-             "Νεανικό weekend διασκέδασης και έντονης νυχτερινής ζωής"),
+            ("R16", {"adventure": "Medium", "climate": "Cold"},
+             {"archetype": DestinationArchetype.MOUNTAIN_ADVENTURE, "suitability": "Moderate"},
+             "Μέτρια ορεινή δραστηριότητα σε δροσερό κλίμα"),
 
-            ("R11", {"nightlife": "High", "budget": "Medium", "duration": "Short"},
-             {"archetype": DestinationArchetype.VIBRANT_NIGHTLIFE, "suitability": "Excellent"},
-             "Κοσμοπολίτικο city break με έντονη ψυχαγωγία"),
+            ("R17", {"adventure": "Medium", "climate": "Mild"},
+             {"archetype": DestinationArchetype.MOUNTAIN_ADVENTURE, "suitability": "Moderate"},
+             "Ήπια επαφή με τη φύση και πεζοπορία"),
 
-            # Exotic Exploration
-            ("R12", {"adventure": "High", "duration": "Long", "climate": "Warm"},
-             {"archetype": DestinationArchetype.EXOTIC_EXPLORATION, "suitability": "Excellent"},
-             "Εξωτική μακρινή εξερεύνηση σε θερμό/τροπικό προορισμό"),
+            ("R18", {"adventure": "Low"},
+             {"archetype": DestinationArchetype.MOUNTAIN_ADVENTURE, "suitability": "Poor"},
+             "Χαμηλό ενδιαφέρον για περιπέτεια και ορειβασία"),
 
-            ("R13", {"culture": "High", "adventure": "High", "duration": "Long"},
-             {"archetype": DestinationArchetype.EXOTIC_EXPLORATION, "suitability": "Excellent"},
-             "Πολυήμερο ταξίδι ανακάλυψης και πλούσιων εμπειριών"),
+            # -------------------------------------------------------------
+            # Category 4: Luxury & Premium Wellness (6 rules)
+            # -------------------------------------------------------------
+            ("R19", {"relaxation": "High", "budget": "High", "climate": "Warm"},
+             {"archetype": DestinationArchetype.LUXURY_ESCORT, "suitability": "Excellent"},
+             "Πολυτελής καλοκαιρινή χαλάρωση σε premium resort"),
 
-            # Budget Constraint Cross Rules
-            ("R14", {"budget": "Low", "duration": "Long"},
+            ("R20", {"budget": "High", "relaxation": "High"},
+             {"archetype": DestinationArchetype.LUXURY_ESCORT, "suitability": "Excellent"},
+             "Υψηλός προϋπολογισμός με προτεραιότητα στην πολυτέλεια"),
+
+            ("R21", {"climate": "Cold", "relaxation": "High", "budget": "High"},
+             {"archetype": DestinationArchetype.LUXURY_ESCORT, "suitability": "High"},
+             "Χειμερινό luxury σαλέ και spa σε ορεινό τοπίο"),
+
+            ("R22", {"budget": "Medium", "relaxation": "High"},
+             {"archetype": DestinationArchetype.LUXURY_ESCORT, "suitability": "Moderate"},
+             "Επιθυμία ευεξίας με μεσαίο διαθέσιμο προϋπολογισμό"),
+
+            ("R23", {"budget": "Low", "duration": "Long"},
              {"archetype": DestinationArchetype.LUXURY_ESCORT, "suitability": "Poor"},
              "Περιορισμένος προϋπολογισμός για πολυήμερο πολυτελές ταξίδι"),
 
-            ("R15", {"budget": "High", "relaxation": "High"},
-             {"archetype": DestinationArchetype.LUXURY_ESCORT, "suitability": "Excellent"},
-             "Υψηλός προϋπολογισμός με προτεραιότητα στην πολυτέλεια & ευεξία"),
+            ("R24", {"budget": "Low"},
+             {"archetype": DestinationArchetype.LUXURY_ESCORT, "suitability": "Poor"},
+             "Χαμηλός προϋπολογισμός ασύμβατος με premium διαμονή"),
 
-            ("R16", {"budget": "Low", "culture": "Medium", "duration": "Short"},
-             {"archetype": DestinationArchetype.CULTURAL_HERITAGE, "suitability": "High"},
-             "Οικονομική σύντομη πολιτιστική εξόρμηση"),
+            # -------------------------------------------------------------
+            # Category 5: Vibrant Urban & Entertainment (6 rules)
+            # -------------------------------------------------------------
+            ("R25", {"nightlife": "High", "duration": "Short", "budget": "Low"},
+             {"archetype": DestinationArchetype.VIBRANT_NIGHTLIFE, "suitability": "High"},
+             "Νεανικό weekend διασκέδασης με χαμηλό κόστος"),
 
-            ("R17", {"climate": "Cold", "relaxation": "High", "budget": "High"},
-             {"archetype": DestinationArchetype.LUXURY_ESCORT, "suitability": "High"},
-             "Χειμερινό luxury chalet και spa σε ορεινό τοπίο"),
+            ("R26", {"nightlife": "High", "budget": "Medium", "duration": "Short"},
+             {"archetype": DestinationArchetype.VIBRANT_NIGHTLIFE, "suitability": "Excellent"},
+             "Κοσμοπολίτικο city break με έντονη ψυχαγωγία"),
 
-            ("R18", {"climate": "Warm", "adventure": "Medium", "relaxation": "High"},
-             {"archetype": DestinationArchetype.ISLAND_RELAXATION, "suitability": "High"},
-             "Συνδυασμός θαλάσσιων σπορ και ανάπαυλας σε θερμό περιβάλλον"),
+            ("R27", {"nightlife": "High", "budget": "High"},
+             {"archetype": DestinationArchetype.VIBRANT_NIGHTLIFE, "suitability": "Excellent"},
+             "Premium νυχτερινή ζωή και clubbing σε μητροπόλεις"),
+
+            ("R28", {"nightlife": "Medium", "duration": "Short"},
+             {"archetype": DestinationArchetype.VIBRANT_NIGHTLIFE, "suitability": "Moderate"},
+             "Μέτρια διάθεση για έξοδο σε σύντομο ταξίδι πόλης"),
+
+            ("R29", {"nightlife": "Medium", "culture": "High"},
+             {"archetype": DestinationArchetype.VIBRANT_NIGHTLIFE, "suitability": "Moderate"},
+             "Συνδυασμός πολιτιστικής ημέρας με βραδινή έξοδο"),
+
+            ("R30", {"nightlife": "Low"},
+             {"archetype": DestinationArchetype.VIBRANT_NIGHTLIFE, "suitability": "Poor"},
+             "Χαμηλό ενδιαφέρον για νυχτερινή διασκέδαση και κλαμπ"),
+
+            # -------------------------------------------------------------
+            # Category 6: Exotic & Tropical Explorer (6 rules)
+            # -------------------------------------------------------------
+            ("R31", {"adventure": "High", "duration": "Long", "climate": "Warm"},
+             {"archetype": DestinationArchetype.EXOTIC_EXPLORATION, "suitability": "Excellent"},
+             "Εξωτική μακρινή εξερεύνηση σε θερμό προορισμό"),
+
+            ("R32", {"culture": "High", "adventure": "High", "duration": "Long"},
+             {"archetype": DestinationArchetype.EXOTIC_EXPLORATION, "suitability": "Excellent"},
+             "Πολυήμερο ταξίδι ανακάλυψης πλούσιων εμπειριών"),
+
+            ("R33", {"adventure": "High", "climate": "Warm"},
+             {"archetype": DestinationArchetype.EXOTIC_EXPLORATION, "suitability": "High"},
+             "Περιπέτεια σε τροπικό ή εξωτικό περιβάλλον"),
+
+            ("R34", {"adventure": "Medium", "duration": "Long", "climate": "Warm"},
+             {"archetype": DestinationArchetype.EXOTIC_EXPLORATION, "suitability": "Moderate"},
+             "Πολυήμερο ταξίδι με μέτρια περιπέτεια σε ζεστό κλίμα"),
+
+            ("R35", {"culture": "Medium", "adventure": "Medium", "duration": "Long"},
+             {"archetype": DestinationArchetype.EXOTIC_EXPLORATION, "suitability": "Moderate"},
+             "Ισορροπημένη εξερεύνηση μακρινού προορισμού"),
+
+            ("R36", {"duration": "Short", "budget": "Low"},
+             {"archetype": DestinationArchetype.EXOTIC_EXPLORATION, "suitability": "Poor"},
+             "Σύντομος χρόνος και χαμηλό budget για μακρινό εξωτικό ταξίδι")
         ]
 
         for rid, ante, conseq, desc in rule_defs:
@@ -211,6 +299,9 @@ class FuzzyTourismEngine:
         Performs Centroid Defuzzification (Center of Gravity - COG)
         z* = sum(z * mu(z)) / sum(mu(z))
         If archetype is provided, filters active rules affecting that archetype.
+        When no rules fire for an archetype, returns a low baseline score of 10.0%
+        (instead of neutral 50.0%) so that unactivated archetypes do not rank above
+        archetypes that actively fired a 'Poor' rule.
         """
         z_universe = np.linspace(0.0, 100.0, 201)
         aggregated_membership = np.zeros_like(z_universe)
@@ -220,7 +311,8 @@ class FuzzyTourismEngine:
             filtered_rules = [r for r in active_rules if r["archetype"] == archetype]
 
         if not filtered_rules:
-            return 50.0  # Neutral default when no rule triggers
+            # Χαμηλό ουδέτερο σκορ (10.0%) όταν δεν ενεργοποιείται κανένας κανόνας για τον αρχέτυπο
+            return 10.0
 
         # Aggregate clipped output membership functions (Mamdani Max-Min)
         for r in filtered_rules:
@@ -234,7 +326,7 @@ class FuzzyTourismEngine:
 
         sum_mu = np.sum(aggregated_membership)
         if sum_mu == 0:
-            return 50.0
+            return 10.0
 
         cog = float(np.sum(z_universe * aggregated_membership) / sum_mu)
         return round(cog, 2)

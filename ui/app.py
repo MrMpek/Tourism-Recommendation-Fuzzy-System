@@ -322,7 +322,7 @@ elif app_mode == "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Ε�
 
     with tab_rules:
         st.markdown("### 📜 Βάση Ασαφών Κανόνων (Mamdani Fuzzy Rule Base)")
-        st.write("Συνολικά ορίζονται 18 κανόνες εμπειρογνώμονα που συνδυάζουν τις εισόδους με τύπους προορισμών και βαθμούς καταλληλότητας:")
+        st.write(f"Συνολικά ορίζονται **{len(recommender.fuzzy_engine.rules)} κανόνες εμπειρογνώμονα** που συνδυάζουν τις εισόδους με τύπους προορισμών και βαθμούς καταλληλότητας (Poor, Moderate, High, Excellent):")
 
         rules_data = []
         for r in recommender.fuzzy_engine.rules:
@@ -340,10 +340,11 @@ elif app_mode == "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Ε�
 
         st.markdown("#### Μέθοδος Αποσαφοποίησης (Centroid / Center of Gravity)")
         st.latex(r"z^* = \frac{\int z \cdot \mu_A(z) \, dz}{\int \mu_A(z) \, dz} \approx \frac{\sum_{i=1}^n z_i \cdot \mu_A(z_i)}{\sum_{i=1}^n \mu_A(z_i)}")
-        st.info("Υπολογίζεται το κέντρο βάρους του συνενωμένου (aggregated) ασαφούς συνόλου εξόδου για κάθε αρχέτυπο προορισμού.")
+        st.info("Υπολογίζεται το κέντρο βάρους του συνενωμένου (aggregated) ασαφούς συνόλου εξόδου για κάθε αρχέτυπο προορισμού. Σε περίπτωση μη ενεργοποίησης κανόνα, αποδίδεται χαμηλό σκορ βάσης 10.0%.")
 
     with tab_fcm:
         st.markdown("### 🔬 Μαθηματική Διατύπωση Fuzzy C-Means (FCM)")
+        st.info("ℹ️ **Συνθετικό Σύνολο Δεδομένων (Synthetic Dataset):** Το dataset εκπαίδευσης του FCM αποτελείται από 350 συνθετικά δείγματα ταξιδιωτών που μοντελοποιούν ρεαλιστικά ταξιδιωτικά μοτίβα και καταναλωτικά προφίλ στην Ελλάδα και διεθνώς.")
         st.write("Ο αλγόριθμος Fuzzy C-Means (Bezdek 1981) ελαχιστοποιεί τη συνάρτηση κόστους:")
         st.latex(r"J_m = \sum_{i=1}^N \sum_{j=1}^C (u_{ij})^m \cdot \|x_i - v_j\|^2")
         st.write("Όπου:")
@@ -352,7 +353,7 @@ elif app_mode == "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Ε�
         * $C$: Πλήθος συστάδων / τουριστικών personas ($C = 5$)
         * $m$: Συντελεστής ασάφειας (fuzzifier, $m = 2.0$)
         * $u_{ij} \in [0, 1]$: Βαθμός συμμετοχής του χρήστη $i$ στην ομάδα $j$, με $\sum_{j=1}^C u_{ij} = 1$
-        * $v_j$: Κεντροειδές της συστάδας $j$
+        * $v_j$: Κεντροειδές της συστάδας $j$ (ευθυγραμμισμένο μέσω του αλγορίθμου Hungarian - Kuhn-Munkres)
         """)
 
         metrics = recommender.fcm_model.compute_validation_metrics()
@@ -364,6 +365,10 @@ elif app_mode == "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Ε�
         with col_m3:
             st.metric("Επαναλήψεις Σύγκλισης", metrics.get("iterations_to_converge", 0))
 
+        st.markdown("#### 📍 Πίνακας Κεντροειδών Προφίλ σε Φυσικές Μονάδες (€, °C, Ημέρες, 0-10)")
+        df_centroids = recommender.fcm_model.get_centroids_dataframe()
+        st.dataframe(df_centroids, use_container_width=True)
+
         # Cost function convergence plot
         fig_cost = px.line(
             x=list(range(1, len(recommender.fcm_model.cost_history) + 1)),
@@ -373,6 +378,7 @@ elif app_mode == "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Ε�
         )
         fig_cost.update_layout(template="plotly_white", height=320)
         st.plotly_chart(fig_cost, use_container_width=True)
+
 
     with tab_feedback:
         st.markdown("### 🔄 Μηχανισμός Ανάδρασης & Προσαρμοστική Μάθηση (Closed Feedback Loop)")
