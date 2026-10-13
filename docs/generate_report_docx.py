@@ -350,7 +350,7 @@ def build_docx_report(output_path: str):
         "   • Κανόνας R02: Culture is High (0.75) AND Budget is Medium (0.65) ⇒ Firing strength α_R02 = min(0.75, 0.65) = 0.65 (Cultural City, High).\n"
         "   • Κανόνας R29: Nightlife is Medium (0.75) AND Culture is High (0.75) ⇒ Firing strength α_R29 = min(0.75, 0.75) = 0.75 (Vibrant Urban, Moderate).\n"
         "3. Αποκοπή & Συνένωση (Aggregation): Για τον αρχέτυπο 'Cultural & Heritage City', η συνάρτηση High αποκόπτεται στο ύψος 0.65.\n"
-        "4. Αποσαφοποίηση Centroid: Ολοκλήρωση σε 201 σημεία z ∈ [0, 100] ⇒ z* = 68.3%."
+        "4. Αποσαφοποίηση Centroid: Ολοκλήρωση σε 201 σημεία z από 0 έως 100 ⇒ z* = 68.3%."
     )
 
     doc.add_page_break()
@@ -361,7 +361,7 @@ def build_docx_report(output_path: str):
     add_h1(doc, "3. Επέκταση: Fuzzy C-Means (FCM) Customer Profiling")
     add_styled_paragraph(doc, 
         "Η επέκταση της εργασίας υλοποιεί τον αλγόριθμο Fuzzy C-Means (Bezdek 1981) για την ομαδοποίηση των χρηστών σε 5 τουριστικά personas. "
-        "Σε αντίθεση με τη σκληρή ομαδοποίηση (Hard Clustering K-Means), το FCM αποδίδει βαθμούς συμμετοχής u_ij ∈ [0, 1] σε πολλαπλά προφίλ ταυτόχρονα, "
+        "Σε αντίθεση με τη σκληρή ομαδοποίηση (Hard Clustering K-Means), το FCM αποδίδει βαθμούς συμμετοχής u_ij στο διάστημα [0, 1] σε πολλαπλά προφίλ ταυτόχρονα, "
         "μοντελοποιώντας με ακρίβεια την πολυδιάστατη ανθρώπινη ταξιδιωτική συμπεριφορά."
     )
     add_styled_paragraph(doc, 
@@ -442,7 +442,7 @@ def build_docx_report(output_path: str):
         "Κάθε τουριστικό persona j του FCM αντιστοιχεί σε ένα διάνυσμα προτίμησης W[j][archetype] προς τα 6 αρχέτυπα προορισμών. "
         "Η συνάφεια του ταξιδιώτη προς έναν αρχέτυπο υπολογίζεται ως το σταθμισμένο άθροισμα των βαθμών συμμετοχής του u_j:"
     )
-    add_formula_box(doc, "persona_affinity(archetype) = Σ_{j=1}^5 ( u_j · W[j][archetype] )")
+    add_formula_box(doc, "persona_affinity(archetype) = άθροισμα [ u_j · W[j][archetype] ] για όλα τα personas j = 1..5")
     add_styled_paragraph(doc, 
         "Το persona_score (0-100%) ενσωματώνεται στο τελικό σκορ με βάρος 15%, λαμβάνοντας υπόψη και τον δευτερεύοντα αρχέτυπο του προορισμού."
     )
@@ -465,7 +465,7 @@ def build_docx_report(output_path: str):
     add_formula_box(doc, "FinalScore = BaseScore + Δ_feedback")
     add_formula_box(doc, "Δ_feedback = w_r · ( r̄ - 3.0 ) + w_a · ( AcceptanceRate - 0.5 )")
     add_styled_paragraph(doc, 
-        "όπου r̄ ∈ [1, 5] είναι η μέση βαθμολογία αστεριών, AcceptanceRate ∈ [0, 1] το ποσοστό επιλογής και w_r = 4.0, w_a = 4.0. "
+        "όπου r̄ είναι η μέση βαθμολογία αστεριών (μεταξύ 1 και 5), AcceptanceRate το ποσοστό επιλογής (μεταξύ 0 και 1) και w_r = 4.0, w_a = 4.0. "
         "Προορισμοί με συνεπή θετική ανάδραση λαμβάνουν πριμ έως +10%, ενώ απορριφθείσες επιλογές υποβαθμίζονται αυτόματα."
     )
 

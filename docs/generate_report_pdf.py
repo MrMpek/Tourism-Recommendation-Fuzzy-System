@@ -24,15 +24,27 @@ from reportlab.pdfbase.ttfonts import TTFont
 from core.recommender import HybridTourismRecommender
 from core.fuzzy_engine import DestinationArchetype
 
-# Register Arial with Greek support
-FONT_REGULAR_PATH = "/System/Library/Fonts/Supplemental/Arial.ttf"
-FONT_BOLD_PATH = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
-FONT_ITALIC_PATH = "/System/Library/Fonts/Supplemental/Arial Italic.ttf"
+# Register DejaVu Sans fonts from docs/fonts/ for full Greek Unicode coverage
+FONTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+DEJAVU_REGULAR = os.path.join(FONTS_DIR, "DejaVuSans.ttf")
+DEJAVU_BOLD = os.path.join(FONTS_DIR, "DejaVuSans-Bold.ttf")
+DEJAVU_ITALIC = os.path.join(FONTS_DIR, "DejaVuSans-Italic.ttf")
 
-if os.path.exists(FONT_REGULAR_PATH):
-    pdfmetrics.registerFont(TTFont('ArialGreek', FONT_REGULAR_PATH))
-    pdfmetrics.registerFont(TTFont('ArialGreek-Bold', FONT_BOLD_PATH))
-    pdfmetrics.registerFont(TTFont('ArialGreek-Italic', FONT_ITALIC_PATH))
+ARIAL_REGULAR = "/System/Library/Fonts/Supplemental/Arial.ttf"
+ARIAL_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+ARIAL_ITALIC = "/System/Library/Fonts/Supplemental/Arial Italic.ttf"
+
+if os.path.exists(DEJAVU_REGULAR) and os.path.exists(DEJAVU_BOLD):
+    pdfmetrics.registerFont(TTFont('DejaVuGreek', DEJAVU_REGULAR))
+    pdfmetrics.registerFont(TTFont('DejaVuGreek-Bold', DEJAVU_BOLD))
+    pdfmetrics.registerFont(TTFont('DejaVuGreek-Italic', DEJAVU_ITALIC))
+    FONT_NORMAL = 'DejaVuGreek'
+    FONT_BOLD = 'DejaVuGreek-Bold'
+    FONT_ITALIC = 'DejaVuGreek-Italic'
+elif os.path.exists(ARIAL_REGULAR):
+    pdfmetrics.registerFont(TTFont('ArialGreek', ARIAL_REGULAR))
+    pdfmetrics.registerFont(TTFont('ArialGreek-Bold', ARIAL_BOLD))
+    pdfmetrics.registerFont(TTFont('ArialGreek-Italic', ARIAL_ITALIC))
     FONT_NORMAL = 'ArialGreek'
     FONT_BOLD = 'ArialGreek-Bold'
     FONT_ITALIC = 'ArialGreek-Italic'
@@ -353,7 +365,7 @@ def build_academic_pdf(output_pdf_path: str):
         "   • Κανόνας R02: Culture is High (0.75) AND Budget is Medium (0.65) ⇒ Firing strength α_R02 = min(0.75, 0.65) = <b>0.65</b> (Cultural City, High).<br/>"
         "   • Κανόνας R29: Nightlife is Medium (0.75) AND Culture is High (0.75) ⇒ Firing strength α_R29 = min(0.75, 0.75) = <b>0.75</b> (Vibrant Urban, Moderate).<br/>"
         "3. <b>Αποκοπή & Συνένωση (Aggregation):</b> Για τον αρχέτυπο 'Cultural & Heritage City', η συνάρτηση High αποκόπτεται στο ύψος 0.65.<br/>"
-        "4. <b>Αποσαφοποίηση Centroid:</b> Ολοκλήρωση σε 201 σημεία z ∈ [0, 100] ⇒ <b>z* = 68.3%</b>.",
+        "4. <b>Αποσαφοποίηση Centroid:</b> Ολοκλήρωση σε 201 σημεία z από 0 έως 100 ⇒ <b>z* = 68.3%</b>.",
         style_body
     ))
 
@@ -365,7 +377,7 @@ def build_academic_pdf(output_pdf_path: str):
     story.append(Paragraph("3. Επέκταση: Fuzzy C-Means (FCM) Customer Profiling", style_h1))
     story.append(Paragraph(
         "Η επέκταση της εργασίας υλοποιεί τον αλγόριθμο <b>Fuzzy C-Means (Bezdek 1981)</b> για την ομαδοποίηση των χρηστών σε 5 τουριστικά personas. "
-        "Σε αντίθεση με τη σκληρή ομαδοποίηση (Hard Clustering K-Means), το FCM αποδίδει βαθμούς συμμετοχής u_ij ∈ [0, 1] σε πολλαπλά προφίλ ταυτόχρονα, "
+        "Σε αντίθεση με τη σκληρή ομαδοποίηση (Hard Clustering K-Means), το FCM αποδίδει βαθμούς συμμετοχής u_ij στο διάστημα [0, 1] σε πολλαπλά προφίλ ταυτόχρονα, "
         "μοντελοποιώντας με ακρίβεια την πολυδιάστατη ανθρώπινη ταξιδιωτική συμπεριφορά.",
         style_body
     ))
@@ -443,7 +455,7 @@ def build_academic_pdf(output_pdf_path: str):
         "Η συνάφεια του ταξιδιώτη προς έναν αρχέτυπο υπολογίζεται ως το σταθμισμένο άθροισμα των βαθμών συμμετοχής του u_j:",
         style_body
     ))
-    story.append(Paragraph("persona_affinity(archetype) = Σ_{j=1}^5 ( u_j · W[j][archetype] )", style_math))
+    story.append(Paragraph("persona_affinity(archetype) = άθροισμα [ u_j · W[j][archetype] ] για όλα τα personas j = 1..5", style_math))
     story.append(Paragraph(
         "Το <b>persona_score</b> (0-100%) ενσωματώνεται στο τελικό σκορ με βάρος 15%, λαμβάνοντας υπόψη και τον δευτερεύοντα αρχέτυπο του προορισμού.",
         style_body
@@ -474,7 +486,7 @@ def build_academic_pdf(output_pdf_path: str):
     story.append(Paragraph("FinalScore = BaseScore + Δ_feedback", style_math))
     story.append(Paragraph("Δ_feedback = w_r · ( r̄ - 3.0 ) + w_a · ( AcceptanceRate - 0.5 )", style_math))
     story.append(Paragraph(
-        "όπου r̄ ∈ [1, 5] είναι η μέση βαθμολογία αστεριών, AcceptanceRate ∈ [0, 1] το ποσοστό επιλογής και w_r = 4.0, w_a = 4.0. "
+        "όπου r̄ είναι η μέση βαθμολογία αστεριών (μεταξύ 1 και 5), AcceptanceRate το ποσοστό επιλογής (μεταξύ 0 και 1) και w_r = 4.0, w_a = 4.0. "
         "Προορισμοί με συνεπή θετική ανάδραση λαμβάνουν πριμ έως +10%, ενώ απορριφθείσες επιλογές υποβαθμίζονται αυτόματα.",
         style_body
     ))

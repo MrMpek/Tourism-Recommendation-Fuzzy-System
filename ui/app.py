@@ -13,6 +13,7 @@ if BASE_DIR not in sys.path:
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.express as px
 
 from core.recommender import HybridTourismRecommender
 from data.catalog_manager import CatalogManager
@@ -92,7 +93,7 @@ recommender = get_recommender()
 catalog_mgr = recommender.catalog_mgr
 
 # Sidebar Navigation
-st.sidebar.image("https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=400&q=80", use_container_width=True)
+st.sidebar.image("https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=400&q=80", width="stretch")
 st.sidebar.title("🧭 Πλοήγηση")
 app_mode = st.sidebar.radio(
     "Επιλέξτε Λειτουργία:",
@@ -105,7 +106,7 @@ app_mode = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Εργασία Μεταπτυχιακού 2026**")
-st.sidebar.caption("Πανεπιστήμιο Πειραιώς - Τμήμα Πληροφορικής\nΜάθημα: Ασαφή Έμπειρα Συστήματα")
+st.sidebar.caption("Μάθημα: Ασαφή Συστήματα & Υπολογιστική Νοημοσύνη")
 
 # ==============================================================================
 # MODE 1: TRAVEL AGENT RECOMMENDER
@@ -336,7 +337,7 @@ elif app_mode == "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Ε�
             })
 
         df_rules = pd.DataFrame(rules_data)
-        st.dataframe(df_rules, use_container_width=True, height=450)
+        st.dataframe(df_rules, width="stretch", height=450)
 
         st.markdown("#### Μέθοδος Αποσαφοποίησης (Centroid / Center of Gravity)")
         st.latex(r"z^* = \frac{\int z \cdot \mu_A(z) \, dz}{\int \mu_A(z) \, dz} \approx \frac{\sum_{i=1}^n z_i \cdot \mu_A(z_i)}{\sum_{i=1}^n \mu_A(z_i)}")
@@ -348,7 +349,7 @@ elif app_mode == "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Ε�
         st.write("Ο αλγόριθμος Fuzzy C-Means (Bezdek 1981) ελαχιστοποιεί τη συνάρτηση κόστους:")
         st.latex(r"J_m = \sum_{i=1}^N \sum_{j=1}^C (u_{ij})^m \cdot \|x_i - v_j\|^2")
         st.write("Όπου:")
-        st.markdown("""
+        st.markdown(r"""
         * $N$: Πλήθος ταξιδιωτών ιστορικού ($N = 350$)
         * $C$: Πλήθος συστάδων / τουριστικών personas ($C = 5$)
         * $m$: Συντελεστής ασάφειας (fuzzifier, $m = 2.0$)
@@ -367,7 +368,7 @@ elif app_mode == "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Ε�
 
         st.markdown("#### 📍 Πίνακας Κεντροειδών Προφίλ σε Φυσικές Μονάδες (€, °C, Ημέρες, 0-10)")
         df_centroids = recommender.fcm_model.get_centroids_dataframe()
-        st.dataframe(df_centroids, use_container_width=True)
+        st.dataframe(df_centroids, width="stretch")
 
         # Cost function convergence plot
         fig_cost = px.line(
@@ -384,12 +385,12 @@ elif app_mode == "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Ε�
         st.markdown("### 🔄 Μηχανισμός Ανάδρασης & Προσαρμοστική Μάθηση (Closed Feedback Loop)")
         st.write("Σύμφωνα με τις προδιαγραφές της εργασίας, το σύστημα περιλαμβάνει πλήρη βρόχο ανάδρασης (Feedback Loop):")
         
-        st.markdown("""
+        st.markdown(r"""
         * **1. Συλλογή Ανάδρασης:** Ο χρήστης/πράκτορας αξιολογεί τις προτάσεις (1-5 αστέρια, Αποδοχή/Απόρριψη, σχόλιο).
         * **2. Προσαρμογή Βαρών (Adaptive Adjustment):** 
         """)
         st.latex(r"\Delta_{\text{feedback}} = w_r \cdot (\bar{r} - 3.0) + w_a \cdot (\text{acceptance\_rate} - 0.5)")
-        st.markdown("""
+        st.markdown(r"""
         Όπου $\bar{r}$ είναι ο μέσος όρος αστεριών και $\text{acceptance\_rate}$ το ποσοστό επιλογής. Προορισμοί με συνεπή θετική ανάδραση λαμβάνουν προσαρμογή έως +10%, ενώ απορριφθείσες επιλογές υποβαθμίζονται αυτόματα.
         * **3. Επεξηγησιμότητα (XAI):** Η επίδραση της ανάδρασης αναφέρεται ρητά στην αιτιολόγηση της τελικής πρότασης.
         """)
@@ -418,7 +419,7 @@ elif app_mode == "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Ε�
                 }
                 for e in reversed(all_fb)
             ])
-            st.dataframe(df_fb, use_container_width=True)
+            st.dataframe(df_fb, width="stretch")
         else:
             st.info("💡 Δεν υπάρχουν ακόμη καταγεγραμμένες αξιολογήσεις. Μεταβείτε στην καρτέλα '✈️ Σύμβουλος Προτάσεων' και υποβάλετε ανάδραση σε έναν προορισμό για να τη δείτε ζωντανά εδώ!")
 
@@ -430,7 +431,7 @@ elif app_mode == "💼 Διαχείριση Καταλόγου & Πακέτων 
     st.markdown('<div class="sub-title">Εμπορική διαχείριση ταξιδιωτικού αποθέματος, εισαγωγή νέων πακέτων και εξαγωγή δεδομένων.</div>', unsafe_allow_html=True)
 
     df_cat = catalog_mgr.to_dataframe()
-    st.dataframe(df_cat, use_container_width=True, height=350)
+    st.dataframe(df_cat, width="stretch", height=350)
 
     # Download CSV
     csv_bytes = df_cat.to_csv(index=False).encode('utf-8-sig')

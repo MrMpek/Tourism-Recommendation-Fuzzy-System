@@ -18,7 +18,7 @@ def run_tests():
     print("==================================================")
 
     # 1. Test Membership Functions
-    print("\n[1/7] Έλεγχος Συναρτήσεων Συμμετοχής (membership.py)...")
+    print("\n[1/8] Έλεγχος Συναρτήσεων Συμμετοχής (membership.py)...")
     from core.membership import triangular, trapezoidal, LinguisticVariable
     assert triangular(5.0, 0.0, 5.0, 10.0) == 1.0, "Triangular peak failed"
     assert triangular(0.0, 0.0, 5.0, 10.0) == 0.0, "Triangular base failed"
@@ -32,7 +32,7 @@ def run_tests():
     print("  -> OK: Τριγωνικές, τραπεζοειδείς και γλωσσικές μεταβλητές λειτουργούν άψογα.")
 
     # 2. Test Fuzzy Tourism Engine & Rule Coverage (B1, B2, B3)
-    print("\n[2/7] Έλεγχος Ασαφούς Μηχανής Mamdani (fuzzy_engine.py)...")
+    print("\n[2/8] Έλεγχος Ασαφούς Μηχανής Mamdani (fuzzy_engine.py)...")
     from core.fuzzy_engine import FuzzyTourismEngine
     engine = FuzzyTourismEngine()
     assert len(engine.rules) == 36, f"Expected 36 rules, found {len(engine.rules)}"
@@ -78,7 +78,7 @@ def run_tests():
     print(f"  -> OK: Ποσοστό έλλειψης κανόνα σε 2000 τυχαίες εισόδους: {zero_rate*100:.2f}% (< 5% όριο).")
 
     # 3. Test Fuzzy C-Means Clustering & Hungarian Alignment (A2, C)
-    print("\n[3/7] Έλεγχος Fuzzy C-Means Clustering & Hungarian Alignment (fcm_clustering.py)...")
+    print("\n[3/8] Έλεγχος Fuzzy C-Means Clustering & Hungarian Alignment (fcm_clustering.py)...")
     from core.fcm_clustering import FuzzyCMeansModel, generate_synthetic_tourist_dataset
 
     # Verify matching across multiple random states
@@ -126,7 +126,7 @@ def run_tests():
     print(f"  -> Partition Coefficient (PC): {metrics['partition_coefficient_PC']}, Partition Entropy (PE): {metrics['partition_entropy_PE']}")
 
     # 4. Test Catalog Manager
-    print("\n[4/7] Έλεγχος Βάσης Προορισμών (catalog_manager.py)...")
+    print("\n[4/8] Έλεγχος Βάσης Προορισμών (catalog_manager.py)...")
     from data.catalog_manager import CatalogManager
     cat_mgr = CatalogManager()
     dests = cat_mgr.get_all()
@@ -136,7 +136,7 @@ def run_tests():
     print(f"  -> OK: Φορτώθηκαν {len(dests)} προορισμοί (12 Ελλάδα & 10 Εξωτερικό) με πλήρη δεδομένα.")
 
     # 5. Test Feedback Manager (using tempfile to preserve real data) (D1)
-    print("\n[5/7] Έλεγχος Μηχανισμού Ανάδρασης (feedback_manager.py)...")
+    print("\n[5/8] Έλεγχος Μηχανισμού Ανάδρασης (feedback_manager.py)...")
     from data.feedback_manager import FeedbackManager
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
         temp_fb_path = tmp.name
@@ -155,7 +155,7 @@ def run_tests():
             os.remove(temp_fb_path)
 
     # 6. Test Hybrid Tourism Recommender (A1, B4)
-    print("\n[6/7] Έλεγχος Υβριδικού Recommender & Επίδρασης FCM (recommender.py)...")
+    print("\n[6/8] Έλεγχος Υβριδικού Recommender & Επίδρασης FCM (recommender.py)...")
     from core.recommender import HybridTourismRecommender
     rec = HybridTourismRecommender()
     res = rec.recommend(test_inputs, top_n=3)
@@ -195,7 +195,7 @@ def run_tests():
     print(f"     * Κοινά στα Top-5: {len(common_destinations)}/5 προορισμοί.")
 
     # 7. Test Visualizations & UI components
-    print("\n[7/7] Έλεγχος Οπτικοποιήσεων & Γραφημάτων (visualizations.py)...")
+    print("\n[7/8] Έλεγχος Οπτικοποιήσεων & Γραφημάτων (visualizations.py)...")
     from ui.visualizations import (
         plot_fuzzy_variable,
         plot_persona_radar_chart,
@@ -208,6 +208,21 @@ def run_tests():
     fig_rules = plot_active_rules_chart(res["active_fuzzy_rules"])
     assert fig_var and fig_radar and fig_break and fig_rules, "Visualization creation failed"
     print("  -> OK: Όλα τα διαδραστικά διαγράμματα Plotly παράγονται άρτια χωρίς σφάλματα.")
+
+    # 8. Test Headless Streamlit UI (AppTest) across all 3 modes
+    print("\n[8/8] Έλεγχος Headless Streamlit UI (AppTest και στις 3 λειτουργίες)...")
+    from streamlit.testing.v1 import AppTest
+    modes = [
+        "✈️ Σύμβουλος Προτάσεων (Travel Agent Recommender)",
+        "🧠 Ασαφής Μηχανή & FCM (Ακαδημαϊκή Εποπτεία)",
+        "💼 Διαχείριση Καταλόγου & Πακέτων (B2B Inventory)"
+    ]
+    for mode in modes:
+        at = AppTest.from_file("ui/app.py", default_timeout=30)
+        at.run()
+        at.sidebar.radio[0].set_value(mode).run()
+        assert len(at.exception) == 0, f"Σφάλμα κατά την εκτέλεση της λειτουργίας '{mode}': {at.exception}"
+        print(f"  -> OK: Η λειτουργία '{mode}' εκτελέστηκε χωρίς σφάλματα.")
 
     print("\n" + "="*50)
     print("  ΟΛΟΙ ΟΙ ΕΛΕΓΧΟΙ ΟΛΟΚΛΗΡΩΘΗΚΑΝ ΜΕ ΕΠΙΤΥΧΙΑ (100% PASS)")

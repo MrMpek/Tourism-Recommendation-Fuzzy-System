@@ -2,11 +2,16 @@
 B2B Client Travel Proposal (Quotation) Generator in PDF format.
 Generates a branded, professional travel itinerary proposal for clients,
 including FCM Persona breakdown, recommended packages, cost estimates, and XAI rationale.
+Uses DejaVu Sans TTF fonts bundled in docs/fonts/ for 100% Greek Unicode support.
 """
 import io
 import os
+import sys
 from typing import Dict, List, Any
 from datetime import datetime
+
+# Ensure project root is in sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -19,23 +24,30 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Register Arial with Greek support
-FONT_REGULAR_PATH = "/System/Library/Fonts/Supplemental/Arial.ttf"
-FONT_BOLD_PATH = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
-FONT_ITALIC_PATH = "/System/Library/Fonts/Supplemental/Arial Italic.ttf"
+# Register DejaVu Sans fonts from docs/fonts/ for full Greek Unicode coverage
+FONTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+DEJAVU_REGULAR = os.path.join(FONTS_DIR, "DejaVuSans.ttf")
+DEJAVU_BOLD = os.path.join(FONTS_DIR, "DejaVuSans-Bold.ttf")
+DEJAVU_ITALIC = os.path.join(FONTS_DIR, "DejaVuSans-Italic.ttf")
 
-if os.path.exists(FONT_REGULAR_PATH):
-    try:
-        pdfmetrics.registerFont(TTFont('ArialGreek', FONT_REGULAR_PATH))
-        pdfmetrics.registerFont(TTFont('ArialGreek-Bold', FONT_BOLD_PATH))
-        pdfmetrics.registerFont(TTFont('ArialGreek-Italic', FONT_ITALIC_PATH))
-        FONT_NORMAL = 'ArialGreek'
-        FONT_BOLD = 'ArialGreek-Bold'
-        FONT_ITALIC = 'ArialGreek-Italic'
-    except Exception:
-        FONT_NORMAL = 'Helvetica'
-        FONT_BOLD = 'Helvetica-Bold'
-        FONT_ITALIC = 'Helvetica-Oblique'
+ARIAL_REGULAR = "/System/Library/Fonts/Supplemental/Arial.ttf"
+ARIAL_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+ARIAL_ITALIC = "/System/Library/Fonts/Supplemental/Arial Italic.ttf"
+
+if os.path.exists(DEJAVU_REGULAR) and os.path.exists(DEJAVU_BOLD):
+    pdfmetrics.registerFont(TTFont('DejaVuGreek', DEJAVU_REGULAR))
+    pdfmetrics.registerFont(TTFont('DejaVuGreek-Bold', DEJAVU_BOLD))
+    pdfmetrics.registerFont(TTFont('DejaVuGreek-Italic', DEJAVU_ITALIC))
+    FONT_NORMAL = 'DejaVuGreek'
+    FONT_BOLD = 'DejaVuGreek-Bold'
+    FONT_ITALIC = 'DejaVuGreek-Italic'
+elif os.path.exists(ARIAL_REGULAR):
+    pdfmetrics.registerFont(TTFont('ArialGreek', ARIAL_REGULAR))
+    pdfmetrics.registerFont(TTFont('ArialGreek-Bold', ARIAL_BOLD))
+    pdfmetrics.registerFont(TTFont('ArialGreek-Italic', ARIAL_ITALIC))
+    FONT_NORMAL = 'ArialGreek'
+    FONT_BOLD = 'ArialGreek-Bold'
+    FONT_ITALIC = 'ArialGreek-Italic'
 else:
     FONT_NORMAL = 'Helvetica'
     FONT_BOLD = 'Helvetica-Bold'
@@ -138,7 +150,8 @@ def create_travel_proposal_pdf(
         fontName=FONT_BOLD,
         fontSize=9,
         leading=12,
-        textColor=colors.HexColor("#1e3799")
+        textColor=colors.HexColor("#1e3799"),
+        alignment=1
     )
     style_meta_label = ParagraphStyle(
         'PropMetaL',
@@ -158,7 +171,7 @@ def create_travel_proposal_pdf(
     story = []
 
     # 1. Header Information Block
-    story.append(Paragraph("ΕΠΙΣΗΜΗ ΤΑΞΙΔΙΩΤΙΚΗ ΠΡΟΣΦΟΡΑ & ΠΛΑΝΟ", style_title))
+    story.append(Paragraph("ΕΠΙΣΗΜΗ ΤΑΞΙΔΙΩΤΙΚΗ ΠΡΟΣΦΟΡΑ &amp; ΠΛΑΝΟ", style_title))
     today_str = datetime.now().strftime("%d/%m/%Y")
     ref_num = f"QT-{datetime.now().strftime('%Y%m%d')}-{abs(hash(client_name)) % 10000:04d}"
     story.append(Paragraph(f"Αρ. Προσφοράς: <b>{ref_num}</b> | Ημερομηνία Έκδοσης: <b>{today_str}</b>", style_subtitle))
@@ -275,7 +288,7 @@ def create_travel_proposal_pdf(
 
     story.append(Spacer(1, 10))
     story.append(Paragraph(
-        "<b>Όροι & Κράτηση:</b> Οι ανωτέρω προτάσεις έχουν παραχθεί εξατομικευμένα με το Ασαφές Έμπειρο Σύστημα FuzzyTravel AI. "
+        "<b>Όροι &amp; Κράτηση:</b> Οι ανωτέρω προτάσεις έχουν παραχθεί εξατομικευμένα με το Ασαφές Έμπειρο Σύστημα FuzzyTravel AI. "
         "Οι τιμές και η διαθεσιμότητα επιβεβαιώνονται κατά την οριστική δέσμευση των εισιτηρίων και της διαμονής. "
         "Επικοινωνήστε με τον ταξιδιωτικό σας πράκτορα για ολοκλήρωση της κράτησης.",
         ParagraphStyle('PropFooterNote', fontName=FONT_NORMAL, fontSize=7.5, leading=10, textColor=colors.HexColor("#64748b"))
@@ -284,3 +297,22 @@ def create_travel_proposal_pdf(
     doc.build(story, canvasmaker=ProposalCanvas)
     buffer.seek(0)
     return buffer.getvalue()
+
+
+if __name__ == "__main__":
+    from core.recommender import HybridTourismRecommender
+    rec_engine = HybridTourismRecommender()
+    t_query = {"budget": 1200.0, "climate": 24.0, "duration": 5.0, "culture": 8.0, "adventure": 4.0, "relaxation": 7.0, "nightlife": 6.0}
+    res = rec_engine.recommend(t_query, top_n=3)
+    pdf_bytes = create_travel_proposal_pdf(
+        "Παναγιώτης Μπεκιάρης",
+        "Ταξιδιωτικός Σύμβουλος",
+        t_query,
+        res["fcm_profiling"],
+        res["recommendations"],
+        "Περιλαμβάνει πρωινό και απευθείας πτήσεις."
+    )
+    sample_out = os.path.join(os.path.dirname(__file__), "Sample_Travel_Proposal.pdf")
+    with open(sample_out, "wb") as f:
+        f.write(pdf_bytes)
+    print(f"Sample Travel Proposal successfully saved to: {sample_out}")
