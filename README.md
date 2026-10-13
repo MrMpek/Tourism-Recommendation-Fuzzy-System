@@ -40,8 +40,11 @@
 │   └── visualizations.py           # Interactive Plotly & Radar Charts
 │
 ├── docs/                           # Παραδοτέο 2 (Έκθεση & Εγχειρίδιο Χρήστη)
+│   ├── Fuzzy_Tourism_Recommendation_System_Report.docx # Το επίσημο Word (.docx) παραδοτέο
 │   ├── Fuzzy_Tourism_Recommendation_System_Report.pdf  # Το επίσημο PDF παραδοτέο
-│   ├── generate_report_pdf.py      # Script αναπαραγωγής της έκθεσης
+│   ├── generate_report_docx.py     # Script παραγωγής της έκθεσης σε Word (.docx)
+│   ├── generate_report_pdf.py      # Script παραγωγής της έκθεσης σε PDF
+│   ├── generate_proposal_pdf.py    # Script εξαγωγής προσφορών πελάτη (B2B Quotation)
 │   └── figures/                    # Υψηλής ανάλυσης διαγράμματα συστήματος
 │
 ├── requirements.txt                # Εξαρτήσεις έργου

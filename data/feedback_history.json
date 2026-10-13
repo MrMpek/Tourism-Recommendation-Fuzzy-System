@@ -47,5 +47,23 @@
     "rating": 5,
     "accepted": true,
     "comment": "Αυτοματοποιημένος έλεγχος δοκιμής"
+  },
+  {
+    "id": "fb_4_20261013025349",
+    "timestamp": "2026-10-13T02:53:49.467433",
+    "destination_id": "gr_chania",
+    "destination_name": "Χανιά",
+    "user_query": {
+      "budget": 1200.0,
+      "climate": 24.0,
+      "duration": 5.0,
+      "culture": 8.0,
+      "adventure": 4.0,
+      "relaxation": 7.0,
+      "nightlife": 6.0
+    },
+    "rating": 5,
+    "accepted": true,
+    "comment": "Αυτοματοποιημένος έλεγχος δοκιμής"
   }
 ]
