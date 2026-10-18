@@ -21,6 +21,10 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
+import math
+from PIL import Image as PILImage
+from docs.render_formulas import render_all_formulas
+
 from core.recommender import HybridTourismRecommender
 from core.fuzzy_engine import DestinationArchetype
 
@@ -81,7 +85,7 @@ class NumberedCanvas(canvas.Canvas):
         self.setFillColor(colors.HexColor("#7f8c8d"))
 
         # Header
-        self.drawString(54, 800, "ΠΑΝΕΠΙΣΤΗΜΙΟ ΠΕΙΡΑΙΩΣ | ΑΣΑΦΗ ΣΥΣΤΗΜΑΤΑ & ΥΠΟΛΟΓΙΣΤΙΚΗ ΝΟΗΜΟΣΥΝΗ")
+        self.drawString(54, 800, "ΠΑΝΕΠΙΣΤΗΜΙΟ ΠΕΙΡΑΙΩΣ | ΤΕΧΝΟΛΟΓΙΑ ΑΣΑΦΩΝ ΣΥΣΤΗΜΑΤΩΝ ΛΟΓΙΣΜΙΚΟΥ")
         self.setStrokeColor(colors.HexColor("#bdc3c7"))
         self.setLineWidth(0.5)
         self.line(54, 792, 540, 792)
@@ -94,7 +98,35 @@ class NumberedCanvas(canvas.Canvas):
         self.restoreState()
 
 
+def make_formula_flowable(formula_filename, fallback_text, width_pt=None, height_pt=None, style_math=None):
+    formula_path = os.path.join(os.path.dirname(__file__), "figures", "formulas", formula_filename)
+    if os.path.exists(formula_path) and os.path.getsize(formula_path) > 0:
+        try:
+            with PILImage.open(formula_path) as im:
+                orig_w, orig_h = im.size
+            if width_pt and height_pt:
+                w, h = width_pt, height_pt
+            elif width_pt:
+                w = width_pt
+                h = orig_h * (width_pt / orig_w)
+            elif height_pt:
+                h = height_pt
+                w = orig_w * (height_pt / orig_h)
+            else:
+                w = orig_w * 72.0 / 300.0
+                h = orig_h * 72.0 / 300.0
+            img = Image(formula_path, width=w, height=h)
+            img.hAlign = 'CENTER'
+            return img
+        except Exception:
+            pass
+    return Paragraph(fallback_text, style_math)
+
+
 def build_academic_pdf(output_pdf_path: str):
+    # Ensure all math formula images are rendered
+    render_all_formulas()
+
     # Initialize recommender engine to extract dynamic metrics
     rec = HybridTourismRecommender()
     fcm_metrics = rec.fcm_model.compute_validation_metrics()
@@ -220,11 +252,11 @@ def build_academic_pdf(output_pdf_path: str):
     story.append(Spacer(1, 35))
 
     info_data = [
-        [Paragraph("<b>Μάθημα:</b>", style_body), Paragraph("Ασαφή Συστήματα & Υπολογιστική Νοημοσύνη", style_body)],
+        [Paragraph("<b>Μάθημα:</b>", style_body), Paragraph("Τεχνολογία Ασαφών Συστημάτων Λογισμικού", style_body)],
         [Paragraph("<b>Διδάσκουσα:</b>", style_body), Paragraph("Δρ. Κ. Χρυσαφιάδη (kchrysafiadi@unipi.gr)", style_body)],
-        [Paragraph("<b>Ομάδα Εργασίας:</b>", style_body), Paragraph("1. [Ονοματεπώνυμο – ΑΜ]<br/>2. [Ονοματεπώνυμο – ΑΜ]<br/>3. [Ονοματεπώνυμο – ΑΜ]", style_body)],
+        [Paragraph("<b>Ομάδα Εργασίας:</b>", style_body), Paragraph("1. Παναγιώτης Μπεκιάρης (ΜΠΣΠ2530)<br/>2. Χρήστος Τζαμπάζης (ΜΠΣΠ2550)<br/>3. Ουρανία Αργυρα (ΜΠΣΠ2501)", style_body)],
         [Paragraph("<b>Ακαδημαϊκό Έτος:</b>", style_body), Paragraph("2025 - 2026", style_body)],
-        [Paragraph("<b>Παραδοτέα:</b>", style_body), Paragraph("1. Πηγαίος Κώδικας & Εφαρμογή Streamlit<br/>2. Τεχνική Έκθεση & Εγχειρίδιο Χρήστη (PDF & Word .docx)", style_body)],
+        [Paragraph("<b>Παραδοτέα:</b>", style_body), Paragraph("1. Πηγαίος Κώδικας & Εφαρμογή Streamlit<br/>2. Τεχνική Έκθεση & Εγχειρίδιο Χρήστη (Word .docx & PDF)", style_body)],
         [Paragraph("<b>GitHub Repo:</b>", style_body), Paragraph("https://github.com/MrMpek/Tourism-Recommendation-Fuzzy-System", style_body)]
     ]
     t_info = Table(info_data, colWidths=[110, 350])
@@ -351,7 +383,7 @@ def build_academic_pdf(output_pdf_path: str):
         "Για τη μετατροπή του συνενωμένου ασαφούς συνόλου σε καθαρό ποσοστό καταλληλότητας (0-100%), εφαρμόζεται η μέθοδος του Κέντρου Βάρους (Centroid COG):",
         style_body
     ))
-    story.append(Paragraph("z* = [ ∫ z · μ_A(z) dz ] / [ ∫ μ_A(z) dz ] ≈ [ Σ (z_i · μ_A(z_i)) ] / [ Σ μ_A(z_i) ]", style_math))
+    story.append(make_formula_flowable("formula_centroid.png", "z* = [ ∫ z · μ_A(z) dz ] / [ ∫ μ_A(z) dz ] ≈ [ Σ (z_i · μ_A(z_i)) ] / [ Σ μ_A(z_i) ]", width_pt=180, style_math=style_math))
     story.append(Paragraph(
         "<i>Σημείωση Μηδενικής Ενεργοποίησης:</i> Όταν κανένας κανόνας δεν ενεργοποιείται για έναν αρχέτυπο, αποδίδεται χαμηλό σκορ βάσης 10.0% "
         "(αντί για το ουδέτερο 50.0%), διασφαλίζοντας ότι μη σχετικοί προορισμοί δεν υπερτερούν έναντι επιλογών που ενεργοποίησαν ρητά κανόνα Poor.",
@@ -389,7 +421,7 @@ def build_academic_pdf(output_pdf_path: str):
 
     story.append(Paragraph("3.1 Μαθηματική Διατύπωση & Ευθυγράμμιση Hungarian", style_h2))
     story.append(Paragraph("Ο αλγόριθμος ελαχιστοποιεί την αντικειμενική συνάρτηση κόστους:", style_body))
-    story.append(Paragraph("J_m = Σ_{i=1}^N Σ_{j=1}^C (u_{ij})^m · || x_i - v_j ||^2", style_math))
+    story.append(make_formula_flowable("formula_fcm_cost.png", "J_m = Σ(i=1..N) Σ(j=1..C) u_ij^m · ‖x_i − v_j‖²", width_pt=180, style_math=style_math))
     story.append(Paragraph(
         "όπου N = 350 δείγματα, C = 5 συστάδες, m = 2.0 (fuzzifier). "
         "<b>Επίλυση Αντιστοίχισης Συστάδων (Hungarian Algorithm):</b> Λόγω της τυχαίας αρχικοποίησης του πίνακα U, οι δείκτες των clusters μπορεί να αντιστραφούν. "
@@ -399,10 +431,17 @@ def build_academic_pdf(output_pdf_path: str):
     ))
 
     story.append(Paragraph(f"3.2 Μετρικές Επικύρωσης & Πίνακας Κεντροειδών (C = 5)", style_h2))
+    pc = float(fcm_metrics.get('partition_coefficient_PC', 0.6624))
+    pe = float(fcm_metrics.get('partition_entropy_PE', 0.7354))
+    iters = fcm_metrics.get('iterations_to_converge', 17)
+    ln_c = math.log(5)
+    pe_ratio = pe / ln_c if ln_c > 0 else 0.5
+    pc_desc = "χαμηλή" if pc < 0.5 else ("μέτρια έως καλή" if pc <= 0.75 else "υψηλή")
+    pe_desc = "χαμηλή" if pe_ratio < 0.33 else ("μέτρια" if pe_ratio <= 0.66 else "υψηλή")
     story.append(Paragraph(
-        f"• <b>Partition Coefficient (PC):</b> {fcm_metrics.get('partition_coefficient_PC', 0.6624)} (υψηλή σαφήνεια συστάδων, θεωρητικό όριο [0.2, 1.0]).<br/>"
-        f"• <b>Partition Entropy (PE):</b> {fcm_metrics.get('partition_entropy_PE', 0.7354)} (χαμηλή εντροπία διαμέρισης, θεωρητικό όριο [0.0, 1.61]).<br/>"
-        f"• <b>Επαναλήψεις Σύγκλισης:</b> {fcm_metrics.get('iterations_to_converge', 17)} επαναλήψεις με ανοχή tol = 1e-5.",
+        f"• <b>Partition Coefficient (PC):</b> {pc:.4f} ({pc_desc} διαχωρισιμότητα προφίλ, με φυσιολογική επικάλυψη, καθώς τα προφίλ ταξιδιωτών δεν είναι αυστηρά διακριτά, θεωρητικό όριο [0.2, 1.0]).<br/>"
+        f"• <b>Partition Entropy (PE):</b> {pe:.4f} ({pe_desc} εντροπία διαμέρισης, {pe_ratio*100:.1f}% του μέγιστου ln(5)={ln_c:.2f}, θεωρητικό όριο [0.0, {ln_c:.2f}]).<br/>"
+        f"• <b>Επαναλήψεις Σύγκλισης:</b> {iters} επαναλήψεις με ανοχή tol = 1e-5.",
         style_body
     ))
 
@@ -455,7 +494,7 @@ def build_academic_pdf(output_pdf_path: str):
         "Η συνάφεια του ταξιδιώτη προς έναν αρχέτυπο υπολογίζεται ως το σταθμισμένο άθροισμα των βαθμών συμμετοχής του u_j:",
         style_body
     ))
-    story.append(Paragraph("persona_affinity(archetype) = άθροισμα [ u_j · W[j][archetype] ] για όλα τα personas j = 1..5", style_math))
+    story.append(make_formula_flowable("formula_persona_affinity.png", "persona_affinity(archetype) = Σ(j=1..5) [ u_j · W[j][archetype] ]", width_pt=260, style_math=style_math))
     story.append(Paragraph(
         "Το <b>persona_score</b> (0-100%) ενσωματώνεται στο τελικό σκορ με βάρος 15%, λαμβάνοντας υπόψη και τον δευτερεύοντα αρχέτυπο του προορισμού.",
         style_body
@@ -463,10 +502,7 @@ def build_academic_pdf(output_pdf_path: str):
 
     story.append(Paragraph("4.2 Μαθηματικό Μοντέλο Τελικού Σκορ & Ασαφή Συστατικά (B4)", style_h2))
     story.append(Paragraph("Το συνολικό σκορ καταλληλότητας κάθε προορισμού υπολογίζεται σύμφωνα με τον τύπο:", style_body))
-    story.append(Paragraph(
-        "BaseScore = 0.25 · ArchScore + 0.15 · PersonaScore + 0.20 · BudgetScore + 0.20 · ActivityScore + 0.10 · ClimateScore + 0.10 · DurationScore",
-        style_math
-    ))
+    story.append(make_formula_flowable("formula_basescore.png", "BaseScore = 0.25·ArchScore + 0.15·PersonaScore + 0.20·BudgetScore + 0.20·ActivityScore + 0.10·ClimateScore + 0.10·DurationScore", width_pt=450, style_math=style_math))
     story.append(Paragraph(
         "Όπου όλα τα βάρη αθροίζουν αυστηρά στο 1.00 (100%) και τα επιμέρους σκορ ορίζονται ως εξής:<br/>"
         "• <b>ArchScore (0.25):</b> Αποσαφοποιημένο σκορ Mamdani Centroid για τον κύριο και δευτερεύοντα αρχέτυπο.<br/>"
@@ -483,8 +519,8 @@ def build_academic_pdf(output_pdf_path: str):
         "Το ιστορικό αξιολογήσεων των χρηστών ανατροφοδοτεί το τελικό σκορ σύμφωνα με τη σχέση:",
         style_body
     ))
-    story.append(Paragraph("FinalScore = BaseScore + Δ_feedback", style_math))
-    story.append(Paragraph("Δ_feedback = w_r · ( r̄ - 3.0 ) + w_a · ( AcceptanceRate - 0.5 )", style_math))
+    story.append(make_formula_flowable("formula_finalscore.png", "FinalScore = BaseScore + Δ_feedback", width_pt=170, style_math=style_math))
+    story.append(make_formula_flowable("formula_feedback_delta.png", "Δ_feedback = w_r · ( r̄ − 3.0 ) + w_a · ( AcceptanceRate − 0.5 )", width_pt=260, style_math=style_math))
     story.append(Paragraph(
         "όπου r̄ είναι η μέση βαθμολογία αστεριών (μεταξύ 1 και 5), AcceptanceRate το ποσοστό επιλογής (μεταξύ 0 και 1) και w_r = 4.0, w_a = 4.0. "
         "Προορισμοί με συνεπή θετική ανάδραση λαμβάνουν πριμ έως +10%, ενώ απορριφθείσες επιλογές υποβαθμίζονται αυτόματα.",
@@ -514,17 +550,17 @@ def build_academic_pdf(output_pdf_path: str):
 
     story.append(Paragraph("5.2 Περιγραφή των 3 Ενοτήτων της Εφαρμογής", style_h2))
     story.append(Paragraph(
-        "1. <b>✈️ Σύμβουλος Προτάσεων (Recommender):</b><br/>"
+        "1. <b>Σύμβουλος Προτάσεων (Recommender):</b><br/>"
         "   • Πλευρική στήλη: Sliders εισαγωγής Budget (150-5000€), Κλίματος (-5 έως 40°C), Διάρκειας (1-25 ημ.) και 4 Δραστηριοτήτων (0-10).<br/>"
         "   • Ταξιδιωτικό DNA (FCM): Διαδραστικό διάγραμμα ραντάρ (Plotly Radar Chart) με τα 5 τουριστικά personas.<br/>"
         "   • Κάρτες Top-5 Προορισμών: Φωτογραφία, εκτιμώμενο κόστος, προτεινόμενο πακέτο γραφείου, διάγραμμα ανάλυσης 6 κριτηρίων και bullet points Επεξηγηματικής AI (XAI).<br/>"
         "   • Φόρμα Ανάδρασης: Υποβολή αστεριών (1-5), αποδοχής/απόρριψης και σχολίου κάτω από κάθε προορισμό.<br/>"
         "   • <b>Εξαγωγή Προσφοράς σε PDF (B2B Quotation):</b> Εισαγωγή στοιχείων πελάτη και παραγωγή επίσημης επώνυμης προσφοράς PDF με 1 κλικ.<br/>"
-        "2. <b>🧠 Ακαδημαϊκή Εποπτεία:</b><br/>"
+        "2. <b>Ακαδημαϊκή Εποπτεία:</b><br/>"
         "   • Διαδραστική προβολή όλων των συναρτήσεων συμμετοχής με κατακόρυφη ένδειξη των τρεχουσών τιμών εισόδου.<br/>"
         "   • Πίνακας 36 κανόνων με firing strengths σε πραγματικό χρόνο, μετρικές σύγκλισης FCM (PC, PE) και πίνακας κεντροειδών.<br/>"
         "   • Ζωντανό log και analytics της καταγεγραμμένης ανάδρασης.<br/>"
-        "3. <b>💼 Διαχείριση Καταλόγου (B2B Inventory):</b><br/>"
+        "3. <b>Διαχείριση Καταλόγου (B2B Inventory):</b><br/>"
         "   • Πλήρης διαχείριση αποθέματος 22 προορισμών (12 Ελλάδα, 10 Εξωτερικό), φόρμα προσθήκης νέου πακέτου και εξαγωγή σε CSV.",
         style_body
     ))
@@ -545,5 +581,5 @@ def build_academic_pdf(output_pdf_path: str):
 
 
 if __name__ == "__main__":
-    pdf_out = os.path.join(os.path.dirname(__file__), "Fuzzy_Tourism_Recommendation_System_Report.pdf")
+    pdf_out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "Fuzzy_Tourism_Recommendation_System_Report.pdf")
     build_academic_pdf(pdf_out)

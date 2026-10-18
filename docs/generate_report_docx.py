@@ -10,6 +10,7 @@ import sys
 # Ensure root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import math
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -19,6 +20,7 @@ from docx.oxml.ns import nsdecls
 
 from core.recommender import HybridTourismRecommender
 from core.fuzzy_engine import DestinationArchetype
+from docs.render_formulas import render_all_formulas
 
 
 def set_cell_background(cell, hex_color):
@@ -42,7 +44,7 @@ def add_header_footer(doc):
         header = section.header
         hp = header.paragraphs[0]
         hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        hrun = hp.add_run("ΠΑΝΕΠΙΣΤΗΜΙΟ ΠΕΙΡΑΙΩΣ | ΑΣΑΦΗ ΣΥΣΤΗΜΑΤΑ & ΥΠΟΛΟΓΙΣΤΙΚΗ ΝΟΗΜΟΣΥΝΗ")
+        hrun = hp.add_run("ΠΑΝΕΠΙΣΤΗΜΙΟ ΠΕΙΡΑΙΩΣ | ΤΕΧΝΟΛΟΓΙΑ ΑΣΑΦΩΝ ΣΥΣΤΗΜΑΤΩΝ ΛΟΓΙΣΜΙΚΟΥ")
         hrun.font.name = "Arial"
         hrun.font.size = Pt(8.5)
         hrun.font.color.rgb = RGBColor(127, 140, 141)
@@ -121,7 +123,26 @@ def add_formula_box(doc, formula_text):
     return p
 
 
+def add_formula_image_or_text(doc, formula_filename, fallback_text, width_inches=None):
+    formula_path = os.path.join(os.path.dirname(__file__), "figures", "formulas", formula_filename)
+    if os.path.exists(formula_path) and os.path.getsize(formula_path) > 0:
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(5)
+        p.paragraph_format.space_after = Pt(5)
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.add_run()
+        if width_inches:
+            run.add_picture(formula_path, width=Inches(width_inches))
+        else:
+            run.add_picture(formula_path)
+        return p
+    return add_formula_box(doc, fallback_text)
+
+
 def build_docx_report(output_path: str):
+    # Ensure all math formula images are rendered
+    render_all_formulas()
+
     rec = HybridTourismRecommender()
     fcm_metrics = rec.fcm_model.compute_validation_metrics()
     rules = rec.fuzzy_engine.rules
@@ -162,40 +183,28 @@ def build_docx_report(output_path: str):
     run_sub = cover_sub_p.add_run("Θέμα 3: Σύστημα Τουριστικών Προτάσεων | Πλήρης Υλοποίηση Βασικού Συστήματος & Επέκτασης FCM")
     format_run(run_sub, "Arial", 11, bold=False, italic=True, color_rgb=(74, 105, 189))
 
-    # Πίνακας Στοιχείων Έργου
-    info_table = doc.add_table(rows=6, cols=2)
-    info_table.alignment = WD_TABLE_ALIGNMENT.CENTER
-    col_widths = [Inches(1.8), Inches(4.7)]
+    # Στοιχεία Έργου & Ομάδα Εργασίας (όπως επεξεργάστηκαν χειροκίνητα στο DOCX)
+    p_course = add_styled_paragraph(doc, space_before=16, space_after=14, align=WD_ALIGN_PARAGRAPH.CENTER)
+    r_c1 = p_course.add_run("Μάθημα:\n")
+    format_run(r_c1, "Arial", 11.5, bold=True, color_rgb=(30, 55, 153))
+    r_c2 = p_course.add_run("Τεχνολογία Ασαφών Συστημάτων Λογισμικού")
+    format_run(r_c2, "Arial", 11.5, bold=False, color_rgb=(44, 62, 80))
 
-    meta_info = [
-        ("Μάθημα:", "Ασαφή Συστήματα & Υπολογιστική Νοημοσύνη"),
-        ("Διδάσκουσα:", "Δρ. Κ. Χρυσαφιάδη (kchrysafiadi@unipi.gr)"),
-        ("Ομάδα Εργασίας:", "1. [Ονοματεπώνυμο – ΑΜ]\n2. [Ονοματεπώνυμο – ΑΜ]\n3. [Ονοματεπώνυμο – ΑΜ]"),
-        ("Ακαδημαϊκό Έτος:", "2025 - 2026"),
-        ("Παραδοτέα Έργου:", "1. Πηγαίος Κώδικας & Εφαρμογή Streamlit (GitHub)\n2. Τεχνική Έκθεση & Εγχειρίδιο Χρήστη (Word .docx & PDF)"),
-        ("Αποθετήριο GitHub:", "https://github.com/MrMpek/Tourism-Recommendation-Fuzzy-System")
-    ]
+    p_prof = add_styled_paragraph(doc, space_before=6, space_after=14, align=WD_ALIGN_PARAGRAPH.CENTER)
+    r_p1 = p_prof.add_run("Διδάσκουσα:\n")
+    format_run(r_p1, "Arial", 11.5, bold=True, color_rgb=(30, 55, 153))
+    r_p2 = p_prof.add_run("Δρ. Κ. Χρυσαφιάδη")
+    format_run(r_p2, "Arial", 11.5, bold=False, color_rgb=(44, 62, 80))
 
-    for row_idx, (label, val) in enumerate(meta_info):
-        row = info_table.rows[row_idx]
-        c0, c1 = row.cells[0], row.cells[1]
-        c0.width, c1.width = col_widths[0], col_widths[1]
-        set_cell_background(c0, "F8F9FA")
-        set_cell_background(c1, "FFFFFF")
-        set_cell_margins(c0, 80, 80, 120, 120)
-        set_cell_margins(c1, 80, 80, 120, 120)
-
-        p0 = c0.paragraphs[0]
-        p0.paragraph_format.space_before = Pt(2)
-        p0.paragraph_format.space_after = Pt(2)
-        r0 = p0.add_run(label)
-        format_run(r0, "Arial", 9.5, bold=True, color_rgb=(30, 55, 153))
-
-        p1 = c1.paragraphs[0]
-        p1.paragraph_format.space_before = Pt(2)
-        p1.paragraph_format.space_after = Pt(2)
-        r1 = p1.add_run(val)
-        format_run(r1, "Arial", 9.5, bold=False, color_rgb=(44, 62, 80))
+    p_team = add_styled_paragraph(doc, space_before=6, space_after=24, align=WD_ALIGN_PARAGRAPH.CENTER)
+    r_t1 = p_team.add_run("Ομάδα Εργασίας:\n")
+    format_run(r_t1, "Arial", 11.5, bold=True, color_rgb=(30, 55, 153))
+    r_t2 = p_team.add_run(
+        "1. Παναγιώτης Μπεκιάρης (ΜΠΣΠ2530)\n"
+        "2. Χρήστος Τζαμπάζης (ΜΠΣΠ2550)\n"
+        "3. Ουρανία Αργυρα (ΜΠΣΠ2501)"
+    )
+    format_run(r_t2, "Arial", 11, bold=False, color_rgb=(44, 62, 80))
 
     doc.add_page_break()
 
@@ -337,7 +346,7 @@ def build_docx_report(output_path: str):
     add_styled_paragraph(doc, 
         "Για τη μετατροπή του συνενωμένου ασαφούς συνόλου σε καθαρό ποσοστό καταλληλότητας (0-100%), εφαρμόζεται η μέθοδος του Κέντρου Βάρους (Centroid COG):"
     )
-    add_formula_box(doc, "z* = [ ∫ z · μ_A(z) dz ] / [ ∫ μ_A(z) dz ] ≈ [ Σ (z_i · μ_A(z_i)) ] / [ Σ μ_A(z_i) ]")
+    add_formula_image_or_text(doc, "formula_centroid.png", "z* = [ ∫ z · μ_A(z) dz ] / [ ∫ μ_A(z) dz ] ≈ [ Σ (z_i · μ_A(z_i)) ] / [ Σ μ_A(z_i) ]", width_inches=2.5)
     add_styled_paragraph(doc, 
         "Σημείωση Μηδενικής Ενεργοποίησης: Όταν κανένας κανόνας δεν ενεργοποιείται για έναν αρχέτυπο, αποδίδεται χαμηλό σκορ βάσης 10.0% "
         "(αντί για το ουδέτερο 50.0%), διασφαλίζοντας ότι μη σχετικοί προορισμοί δεν υπερτερούν έναντι επιλογών που ενεργοποίησαν ρητά κανόνα Poor."
@@ -371,7 +380,7 @@ def build_docx_report(output_path: str):
 
     add_h2(doc, "3.1 Μαθηματική Διατύπωση & Ευθυγράμμιση Hungarian")
     add_styled_paragraph(doc, "Ο αλγόριθμος ελαχιστοποιεί την αντικειμενική συνάρτηση κόστους:")
-    add_formula_box(doc, "J_m = Σ_{i=1}^N Σ_{j=1}^C (u_{ij})^m · || x_i - v_j ||^2")
+    add_formula_image_or_text(doc, "formula_fcm_cost.png", "J_m = Σ(i=1..N) Σ(j=1..C) u_ij^m · ‖x_i − v_j‖²", width_inches=2.4)
     add_styled_paragraph(doc, 
         "όπου N = 350 δείγματα, C = 5 συστάδες, m = 2.0 (fuzzifier). "
         "Επίλυση Αντιστοίχισης Συστάδων (Hungarian Algorithm): Λόγω της τυχαίας αρχικοποίησης του πίνακα U, οι δείκτες των clusters μπορεί να αντιστραφούν. "
@@ -380,11 +389,20 @@ def build_docx_report(output_path: str):
     )
 
     add_h2(doc, "3.2 Μετρικές Επικύρωσης & Πίνακας Κεντροειδών (C = 5)")
-    add_styled_paragraph(doc, 
-        f"• Partition Coefficient (PC): {fcm_metrics.get('partition_coefficient_PC', 0.6624)} (υψηλή σαφήνεια συστάδων, όριο [0.2, 1.0]).\n"
-        f"• Partition Entropy (PE): {fcm_metrics.get('partition_entropy_PE', 0.7354)} (χαμηλή εντροπία διαμέρισης, όριο [0.0, 1.61]).\n"
-        f"• Επαναλήψεις Σύγκλισης: {fcm_metrics.get('iterations_to_converge', 17)} επαναλήψεις με ανοχή tol = 1e-5."
+    pc = float(fcm_metrics.get('partition_coefficient_PC', 0.6624))
+    pe = float(fcm_metrics.get('partition_entropy_PE', 0.7354))
+    iters = fcm_metrics.get('iterations_to_converge', 17)
+    ln_c = math.log(5)
+    pe_ratio = pe / ln_c if ln_c > 0 else 0.5
+    pc_desc = "χαμηλή" if pc < 0.5 else ("μέτρια έως καλή" if pc <= 0.75 else "υψηλή")
+    pe_desc = "χαμηλή" if pe_ratio < 0.33 else ("μέτρια" if pe_ratio <= 0.66 else "υψηλή")
+
+    fcm_metrics_text = (
+        f"• Partition Coefficient (PC): {pc:.4f} ({pc_desc} διαχωρισιμότητα προφίλ, με φυσιολογική επικάλυψη, καθώς τα προφίλ ταξιδιωτών δεν είναι αυστηρά διακριτά, θεωρητικό όριο [0.2, 1.0]).\n"
+        f"• Partition Entropy (PE): {pe:.4f} ({pe_desc} εντροπία διαμέρισης, {pe_ratio*100:.1f}% του μέγιστου ln(5)={ln_c:.2f}, θεωρητικό όριο [0.0, {ln_c:.2f}]).\n"
+        f"• Επαναλήψεις Σύγκλισης: {iters} επαναλήψεις με ανοχή tol = 1e-5."
     )
+    add_styled_paragraph(doc, fcm_metrics_text)
 
     # Centroids Table in physical units
     df_cent = rec.fcm_model.get_centroids_dataframe()
@@ -442,14 +460,14 @@ def build_docx_report(output_path: str):
         "Κάθε τουριστικό persona j του FCM αντιστοιχεί σε ένα διάνυσμα προτίμησης W[j][archetype] προς τα 6 αρχέτυπα προορισμών. "
         "Η συνάφεια του ταξιδιώτη προς έναν αρχέτυπο υπολογίζεται ως το σταθμισμένο άθροισμα των βαθμών συμμετοχής του u_j:"
     )
-    add_formula_box(doc, "persona_affinity(archetype) = άθροισμα [ u_j · W[j][archetype] ] για όλα τα personas j = 1..5")
+    add_formula_image_or_text(doc, "formula_persona_affinity.png", "persona_affinity(archetype) = Σ(j=1..5) [ u_j · W[j][archetype] ]", width_inches=3.8)
     add_styled_paragraph(doc, 
         "Το persona_score (0-100%) ενσωματώνεται στο τελικό σκορ με βάρος 15%, λαμβάνοντας υπόψη και τον δευτερεύοντα αρχέτυπο του προορισμού."
     )
 
     add_h2(doc, "4.2 Μαθηματικό Μοντέλο Τελικού Σκορ & Ασαφή Συστατικά (B4)")
     add_styled_paragraph(doc, "Το συνολικό σκορ καταλληλότητας κάθε προορισμού υπολογίζεται σύμφωνα με τον τύπο:")
-    add_formula_box(doc, "BaseScore = 0.25 · ArchScore + 0.15 · PersonaScore + 0.20 · BudgetScore + 0.20 · ActivityScore + 0.10 · ClimateScore + 0.10 · DurationScore")
+    add_formula_image_or_text(doc, "formula_basescore.png", "BaseScore = 0.25·ArchScore + 0.15·PersonaScore + 0.20·BudgetScore + 0.20·ActivityScore + 0.10·ClimateScore + 0.10·DurationScore", width_inches=6.2)
     add_styled_paragraph(doc, 
         "Όπου όλα τα βάρη αθροίζουν αυστηρά στο 1.00 (100%) και τα επιμέρους σκορ ορίζονται ως εξής:\n"
         "• ArchScore (0.25): Αποσαφοποιημένο σκορ Mamdani Centroid για τον κύριο και δευτερεύοντα αρχέτυπο.\n"
@@ -462,8 +480,8 @@ def build_docx_report(output_path: str):
 
     add_h2(doc, "4.3 Δυναμικός Βρόχος Ανάδρασης (Feedback Loop)")
     add_styled_paragraph(doc, "Το ιστορικό αξιολογήσεων των χρηστών ανατροφοδοτεί το τελικό σκορ σύμφωνα με τη σχέση:")
-    add_formula_box(doc, "FinalScore = BaseScore + Δ_feedback")
-    add_formula_box(doc, "Δ_feedback = w_r · ( r̄ - 3.0 ) + w_a · ( AcceptanceRate - 0.5 )")
+    add_formula_image_or_text(doc, "formula_finalscore.png", "FinalScore = BaseScore + Δ_feedback", width_inches=2.4)
+    add_formula_image_or_text(doc, "formula_feedback_delta.png", "Δ_feedback = w_r · ( r̄ − 3.0 ) + w_a · ( AcceptanceRate − 0.5 )", width_inches=3.8)
     add_styled_paragraph(doc, 
         "όπου r̄ είναι η μέση βαθμολογία αστεριών (μεταξύ 1 και 5), AcceptanceRate το ποσοστό επιλογής (μεταξύ 0 και 1) και w_r = 4.0, w_a = 4.0. "
         "Προορισμοί με συνεπή θετική ανάδραση λαμβάνουν πριμ έως +10%, ενώ απορριφθείσες επιλογές υποβαθμίζονται αυτόματα."

@@ -1,15 +1,1 @@
-[
-  {
-    "id": "fb_1_20261006023656",
-    "timestamp": "2026-10-06T02:36:56.231730",
-    "destination_id": "gr_santorini",
-    "destination_name": "Σαντορίνη",
-    "user_query": {
-      "budget": 1500,
-      "climate": 28
-    },
-    "rating": 5,
-    "accepted": true,
-    "comment": "Εξαιρετική πρόταση για καλοκαίρι!"
-  }
-]
+[]

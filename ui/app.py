@@ -106,7 +106,7 @@ app_mode = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Εργασία Μεταπτυχιακού 2026**")
-st.sidebar.caption("Μάθημα: Ασαφή Συστήματα & Υπολογιστική Νοημοσύνη")
+st.sidebar.caption("Μάθημα: Τεχνολογία Ασαφών Συστημάτων Λογισμικού")
 
 # ==============================================================================
 # MODE 1: TRAVEL AGENT RECOMMENDER

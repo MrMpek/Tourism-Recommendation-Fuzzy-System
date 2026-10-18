@@ -268,7 +268,7 @@ def create_travel_proposal_pdf(
         # Rationale bullets
         reasons_text = " • ".join(rec.get("rationale", []))
         if reasons_text:
-            pkg_desc_data.append([Paragraph(f"<b>💡 Γιατί σας ταιριάζει (AI Rationale):</b> <font color='#1e3799'>{reasons_text}</font>", style_body)])
+            pkg_desc_data.append([Paragraph(f"<b>Γιατί σας ταιριάζει (AI Rationale):</b> <font color='#1e3799'>{reasons_text}</font>", style_body)])
 
         t_pdesc = Table(pkg_desc_data, colWidths=[510])
         t_pdesc.setStyle(TableStyle([
