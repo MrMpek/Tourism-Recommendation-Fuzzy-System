@@ -73,9 +73,9 @@ def plot_persona_radar_chart(persona_results: List[Dict[str, Any]]) -> go.Figure
         r=values_closed,
         theta=categories_closed,
         fill='toself',
-        fillcolor='rgba(46, 204, 113, 0.25)',
-        line=dict(color='#27ae60', width=2.5),
-        name='Προφίλ Ταξιδιώτη'
+        fillcolor='rgba(37, 99, 235, 0.15)',
+        line=dict(color='#2563eb', width=2),
+        name='Προφίλ χρήστη'
     ))
 
     fig.update_layout(
@@ -86,7 +86,7 @@ def plot_persona_radar_chart(persona_results: List[Dict[str, Any]]) -> go.Figure
             )
         ),
         showlegend=False,
-        title="FCM Soft Persona Distribution (% Συμμετοχή)",
+        title="Κατανομή βαθμών συμμετοχής FCM (%)",
         template="plotly_white",
         height=380,
         margin=dict(l=40, r=40, t=45, b=30)
@@ -115,7 +115,7 @@ def plot_destination_scores_breakdown(component_scores: Dict[str, float], dest_n
     vals = [component_scores.get(k, 0.0) for k in keys]
 
     # Color grading based on score
-    colors = ['#2ecc71' if v >= 75 else '#f39c12' if v >= 50 else '#e74c3c' for v in vals]
+    colors = ['#10b981' if v >= 75 else '#f59e0b' if v >= 50 else '#94a3b8' for v in vals]
 
     fig = go.Figure(go.Bar(
         x=vals,
@@ -127,8 +127,8 @@ def plot_destination_scores_breakdown(component_scores: Dict[str, float], dest_n
     ))
 
     fig.update_layout(
-        title=f"Ανάλυση Κριτηρίων: {dest_name}",
-        xaxis=dict(range=[0, 105], title="Βαθμός Συμβατότητας (%)"),
+        title=f"Ανάλυση κριτηρίων: {dest_name}",
+        xaxis=dict(range=[0, 105], title="Βαθμός συμβατότητας (%)"),
         yaxis=dict(autorange="reversed"),
         template="plotly_white",
         height=280,
@@ -151,14 +151,14 @@ def plot_active_rules_chart(active_rules: List[Dict[str, Any]]) -> go.Figure:
         x=strengths,
         y=rule_labels,
         orientation='h',
-        marker=dict(color='#3498db'),
+        marker=dict(color='#475569'),
         text=[f"α = {s:.3f}" for s in strengths],
         textposition='auto'
     ))
 
     fig.update_layout(
-        title="Ενεργοποιημένοι Ασαφείς Κανόνες (Firing Strength α)",
-        xaxis=dict(range=[0, 1.05], title="Firing Strength (Min Antecedent)"),
+        title="Ενεργοποιημένοι ασαφείς κανόνες (βαθμός ενεργοποίησης α)",
+        xaxis=dict(range=[0, 1.05], title="Βαθμός ενεργοποίησης (Min Antecedent)"),
         yaxis=dict(autorange="reversed"),
         template="plotly_white",
         height=280,
