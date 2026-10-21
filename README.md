@@ -48,6 +48,7 @@ Tourism-Recommendation-Fuzzy-System/
 │   └── visualizations.py           # Interactive Plotly, Radar Charts & Score Breakdown
 │
 ├── docs/                           # Παραδοτέο 2 (Έκθεση & Εγχειρίδιο Χρήστη)
+│   ├── Fuzzy_Tourism_Recommendation_System_Report.pdf  # Το επίσημο PDF παραδοτέο
 │   ├── Fuzzy_Tourism_Recommendation_System_Report.docx # Το επίσημο Word (.docx) παραδοτέο
 │   ├── generate_report_docx.py     # Script παραγωγής της έκθεσης σε Word (.docx)
 │   ├── generate_report_pdf.py      # Script παραγωγής της έκθεσης σε PDF
@@ -152,4 +153,5 @@ python test_system.py
 ## 📄 Παραδοτέα Εργασίας
 * **Παραδοτέο 1 (Αρχεία Συστήματος & Εφαρμογή):** Όλος ο πηγαίος κώδικας στους φακέλους `core/`, `data/`, `ui/`, `api/`, `docs/`.
 * **Παραδοτέο 2 (Έκθεση & Εγχειρίδιο Χρήστη):** 
+  - `docs/Fuzzy_Tourism_Recommendation_System_Report.pdf` (Επίσημη Έκθεση σε PDF)
   - `docs/Fuzzy_Tourism_Recommendation_System_Report.docx` (Επίσημη Έκθεση σε Word)
