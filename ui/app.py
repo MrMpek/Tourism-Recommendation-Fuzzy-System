@@ -120,6 +120,10 @@ st.markdown("""
         border-radius: 6px !important;
         background: #ffffff !important;
     }
+    /* Απόκρυψη προεπιλεγμένου κουμπιού Deploy του Streamlit */
+    .stDeployButton, [data-testid="stAppDeployButton"] {
+        display: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
